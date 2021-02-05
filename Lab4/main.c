@@ -12,25 +12,24 @@ typedef struct Node {
 typedef Node * List;
 
 List *list_create() {
-    List *lst = (List *) calloc(1, sizeof(List));
+    List *lst = (List *) malloc(sizeof(List));
+    *lst = NULL;
     return lst;
 }
 
 void list_add(List *lst, char *string) {
     if (!lst) return;
-    //if there is at least one element
     if (*lst) {
         Node *cur = *lst;
         while (cur->next) {
             cur = cur->next;
         }
-        cur->next = (Node *) calloc(1, sizeof(Node));
+        cur->next = (Node *) malloc(sizeof(Node));
         cur->next->next = NULL;
         cur->next->value = string;
     }
-        //if there is no elements (we add first one)
     else {
-        Node *head = (Node *) calloc(1, sizeof(Node));
+        Node *head = (Node *) malloc(sizeof(Node));
         head->next = NULL;
         head->value = string;
         *lst = head;
@@ -39,7 +38,6 @@ void list_add(List *lst, char *string) {
 
 void list_destroy(List *lst) {
     if (!lst) return;
-    //if there is at least one element
     if (*lst) {
         Node *cur = *lst;
         while (cur) {
@@ -64,24 +62,21 @@ void list_print(List *lst) {
 }
 
 int main() {
-    char *buf = (char *) calloc(MAX_STRING_LEN + 1, sizeof(char));
+    char *buf = (char *) malloc(MAX_STRING_LEN + 1);
     if (!buf) {
         printf("Memory error!\n");
         return 0;
     }
-    if (!fgets(buf, MAX_STRING_LEN, stdin)) {
-        printf("Couldn't read string!\n");
-    }
+    fgets(buf, MAX_STRING_LEN, stdin);
     List *lst = list_create();
     while (buf[0] != '.') {
-        char *string = (char *) calloc(strlen(buf) + 1, sizeof(char));
+        char *string = (char *) malloc(strlen(buf) + 1);
         strcpy(string, buf);
         list_add(lst, string);
-        if (!fgets(buf, MAX_STRING_LEN, stdin)) {
-            printf("Couldn't read string!\n");
-        }
+        fgets(buf, MAX_STRING_LEN, stdin);
     }
     list_print(lst);
     list_destroy(lst);
+    free(buf);
     return 0;
 }
