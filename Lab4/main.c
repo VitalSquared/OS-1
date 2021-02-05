@@ -2,11 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#define MAX_STRING_LEN 1024
-
 typedef struct Node {
-    char* value;
-    struct Node* next;
+    char *value;
+    struct Node *next;
 } Node;
 
 typedef Node * List;
@@ -17,31 +15,27 @@ List *list_create() {
     return lst;
 }
 
-void list_add(List *lst, char *string) {
+void list_add(List *lst, const char *value) {
     if (!lst) return;
+
+    Node *new_elem = (Node *) malloc(sizeof(Node));
+    new_elem->next = NULL;
+    new_elem->value = (char *) malloc(strlen(value) + 1);
+    strcpy(new_elem->value, value);
+
     if (*lst) {
         Node *cur = *lst;
-        while (cur->next) {
-            cur = cur->next;
-        }
-        cur->next = (Node *) malloc(sizeof(Node));
-        cur->next->next = NULL;
-        cur->next->value = string;
-    }
-    else {
-        Node *head = (Node *) malloc(sizeof(Node));
-        head->next = NULL;
-        head->value = string;
-        *lst = head;
-    }
+        while (cur->next) cur = cur->next;
+        cur->next = new_elem;
+    } else *lst = new_elem;
 }
 
 void list_destroy(List *lst) {
     if (!lst) return;
     if (*lst) {
-        Node *cur = *lst;
+        Node *cur = *lst, *next;
         while (cur) {
-            Node *next = cur->next;
+            next = cur->next;
             free(cur->value);
             free(cur);
             cur = next;
@@ -62,21 +56,16 @@ void list_print(List *lst) {
 }
 
 int main() {
-    char *buf = (char *) malloc(MAX_STRING_LEN + 1);
-    if (!buf) {
-        printf("Memory error!\n");
-        return 0;
-    }
-    fgets(buf, MAX_STRING_LEN, stdin);
+    char buf[BUFSIZ];
     List *lst = list_create();
-    while (buf[0] != '.') {
-        char *string = (char *) malloc(strlen(buf) + 1);
-        strcpy(string, buf);
-        list_add(lst, string);
-        fgets(buf, MAX_STRING_LEN, stdin);
+
+    while (fgets(buf, BUFSIZ, stdin)) {
+        if (buf[0] == '.') break;
+        list_add(lst, buf);
     }
+
     list_print(lst);
     list_destroy(lst);
-    free(buf);
+
     return 0;
 }
