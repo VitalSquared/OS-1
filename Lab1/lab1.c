@@ -12,7 +12,6 @@ int main(int argc, char **argv) {
 	int currentArgument;
 	char options[] = "ispuU:cC:dvV:";
 	struct rlimit rlp;
-	char **currentEnvVar;
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s options\n", argv[0]);
 		exit(0);
@@ -56,7 +55,7 @@ int main(int argc, char **argv) {
 				break;
 			case 'v':
 				printf("environment variables are:\n");
-				for (currentEnvVar = environ; *currentEnvVar; currentEnvVar++)
+				for (char** currentEnvVar = environ; *currentEnvVar; currentEnvVar++)
 					printf("%s\n", *currentEnvVar);
 				break;
 			case 'V':
