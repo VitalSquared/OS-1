@@ -9,28 +9,30 @@
 extern char **environ;
 
 int main(int argc, char **argv) {
-	int currentArgument;
+	int curarg;
 	char options[] = "ispuU:cC:dvV:";
 	struct rlimit rlp;
 	if (argc < 2) {
-		fprintf(stderr, "Usage: %s options\n", argv[0]);
+		fprintf(stderr, "Usage: %s [-i] [-s] [-p] [-u] [-Uvalue] [-c] [-Cvalue] [-d] [-v] [-Vvalue]\n", argv[0]);
 		exit(0);
 	}
-	while ((currentArgument = getopt(argc, argv, options)) != EOF) {
-		switch(currentArgument) {
+	while (1) {
+		curarg = getopt(argc, argv, options);
+		if (curarg == EOF) break;
+		switch(curarg) {
 			case 'i':
-				printf("uid = %ld\n", getuid());
-				printf("euid = %ld\n", geteuid());
-				printf("gid = %ld\n", getgid());
-				printf("egid = %ld\n", getegid());
+				printf("user id = %ld\n", getuid());
+				printf("effective user id = %ld\n", geteuid());
+				printf("group id = %ld\n", getgid());
+				printf("effective group id = %ld\n", getegid());
 				break;
 			case 's':
 				(void) setpgid(0, 0);
 				break;
 			case 'p':
-				printf("pid = %ld\n", getpid());
-				printf("parent pid = %ld\n", getppid());
-				printf("group pid = %ld\n", getpgid(0));
+				printf("process id = %ld\n", getpid());
+				printf("parent process id = %ld\n", getppid());
+				printf("process group id = %ld\n", getpgid(0));
 				break;
 			case 'U':
 				if (ulimit(UL_SETFSIZE, atol(optarg)) == -1) {
@@ -55,8 +57,8 @@ int main(int argc, char **argv) {
 				break;
 			case 'v':
 				printf("environment variables are:\n");
-				for (char** currentEnvVar = environ; *currentEnvVar; currentEnvVar++)
-					printf("%s\n", *currentEnvVar);
+				for (char** env = environ; *env; env++)
+					printf("%s\n", *env);
 				break;
 			case 'V':
 				putenv(optarg);
