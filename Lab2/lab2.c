@@ -9,7 +9,7 @@ int main() {
     time_t now;
     struct tm *tm;
 
-    putenv("TZ=PST");
+    setenv("TZ","PST8PDT",1);
     (void) time(&now);
     tm = localtime(&now);
     printf("%s - %s\n", tzname[tm->tm_isdst], asctime(tm));
