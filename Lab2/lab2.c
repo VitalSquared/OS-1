@@ -20,7 +20,7 @@ int main() {
     printf("%d/%d/%02d %d:%02d %s\n", 
 		    tm->tm_mon + 1, 
 		    tm->tm_mday, 
-		    tm->tm_year, 
+		    tm->tm_year + 1900, 
 		    tm->tm_hour, 
 	   	    tm->tm_min, 
 		    tzname[tm->tm_isdst]);
