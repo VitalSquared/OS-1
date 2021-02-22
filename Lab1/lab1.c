@@ -8,8 +8,12 @@
 
 extern char **environ;
 
+#define PUTENV_SUCCESS 0
+#define ERR_SETRLIMIT -1
+#define ERR_ULIMIT -1
+
 int main(int argc, char **argv) {
-	int curarg;
+	int curarg, putenv_res, setrlimit_res, ulimit_res;
 	char options[] = "ispuU:cC:dvV:";
 	struct rlimit rlp;
 	if (argc < 2) {
@@ -21,21 +25,22 @@ int main(int argc, char **argv) {
 		if (curarg == EOF) break;
 		switch(curarg) {
 			case 'i':
-				printf("user id = %ld\n", getuid());
-				printf("effective user id = %ld\n", geteuid());
-				printf("group id = %ld\n", getgid());
-				printf("effective group id = %ld\n", getegid());
+				printf("user id = %u\n", getuid());
+				printf("effective user id = %u\n", geteuid());
+				printf("group id = %u\n", getgid());
+				printf("effective group id = %u\n", getegid());
 				break;
 			case 's':
 				(void) setpgid(0, 0);
 				break;
 			case 'p':
-				printf("process id = %ld\n", getpid());
-				printf("parent process id = %ld\n", getppid());
-				printf("process group id = %ld\n", getpgid(0));
+				printf("process id = %u\n", getpid());
+				printf("parent process id = %u\n", getppid());
+				printf("process group id = %u\n", getpgid(0));
 				break;
 			case 'U':
-				if (ulimit(UL_SETFSIZE, atol(optarg)) == -1) {
+				ulimit_res = ulimit(UL_SETFSIZE, atol(optarg));
+				if (ulimit_res == ERR_ULIMIT) {
 					perror("Must be super-user to increase ulimit\n");
 				}
 				break;
@@ -49,7 +54,8 @@ int main(int argc, char **argv) {
 			case 'C':
 				getrlimit(RLIMIT_CORE, &rlp);
 				rlp.rlim_cur = atol(optarg);
-				if (setrlimit(RLIMIT_CORE, &rlp) == -1)
+				setrlimit_res = setrlimit(RLIMIT_CORE, &rlp);
+				if (setrlimit_res == ERR_SETRLIMIT)
 					perror("Must be super-user to increase core\n");
 				break;
 			case 'd':
@@ -61,7 +67,10 @@ int main(int argc, char **argv) {
 					printf("%s\n", *env);
 				break;
 			case 'V':
-				putenv(optarg);
+				putenv_res = putenv(optarg);
+				if (putenv_res != PUTENV_SUCCESS) {
+					perror("Unable to put environment variable\n");
+				}
 				break;
 		}
 	}
