@@ -11,18 +11,19 @@ extern char **environ;
 #define PUTENV_SUCCESS 0
 #define ERR_SETRLIMIT -1
 #define ERR_ULIMIT -1
+#define INVALID_ARG -1
 
 int main(int argc, char **argv) {
 	int curarg, putenv_res, setrlimit_res, ulimit_res;
 	char options[] = "ispuU:cC:dvV:";
 	struct rlimit rlp;
 	if (argc < 2) {
-		fprintf(stderr, "Usage: %s [-i] [-s] [-p] [-u] [-Uvalue] [-c] [-Cvalue] [-d] [-v] [-Vvalue]\n", argv[0]);
+		printf("Usage: %s [-i] [-s] [-p] [-u] [-Uvalue] [-c] [-Cvalue] [-d] [-v] [-Vvalue]\n", argv[0]);
 		exit(0);
 	}
 	while (1) {
 		curarg = getopt(argc, argv, options);
-		if (curarg == EOF) break;
+		if (curarg == INVALID_ARG) break;
 		switch(curarg) {
 			case 'i':
 				printf("user id = %u\n", getuid());
@@ -41,7 +42,7 @@ int main(int argc, char **argv) {
 			case 'U':
 				ulimit_res = ulimit(UL_SETFSIZE, atol(optarg));
 				if (ulimit_res == ERR_ULIMIT) {
-					perror("Must be super-user to increase ulimit\n");
+					perror("Must be super-user to increase ulimit");
 				}
 				break;
 			case 'u':
@@ -56,20 +57,21 @@ int main(int argc, char **argv) {
 				rlp.rlim_cur = atol(optarg);
 				setrlimit_res = setrlimit(RLIMIT_CORE, &rlp);
 				if (setrlimit_res == ERR_SETRLIMIT)
-					perror("Must be super-user to increase core\n");
+					perror("Must be super-user to increase core");
 				break;
 			case 'd':
-				printf("current working directiry is: %s\n", getcwd(NULL, 100));
+				printf("Current working directiry is: %s\n", getcwd(NULL, 100));
 				break;
 			case 'v':
-				printf("environment variables are:\n");
-				for (char** env = environ; *env; env++)
+				printf("Environment variables are:\n");
+				for (char** env = environ; *env; env++) {
 					printf("%s\n", *env);
+				}
 				break;
 			case 'V':
 				putenv_res = putenv(optarg);
 				if (putenv_res != PUTENV_SUCCESS) {
-					perror("Unable to put environment variable\n");
+					perror("Unable to put environment variable");
 				}
 				break;
 		}
