@@ -16,25 +16,28 @@ List *list_create() {
 }
 
 void list_add(List *lst, const char *value) {
-    if (!lst) return;
+    if (lst == NULL) return;
 
     Node *new_elem = (Node *) malloc(sizeof(Node));
     new_elem->next = NULL;
     new_elem->value = (char *) malloc(strlen(value) + 1);
     strcpy(new_elem->value, value);
 
-    if (*lst) {
+    if (*lst != NULL) {
         Node *cur = *lst;
-        while (cur->next) cur = cur->next;
+        while (cur->next != NULL) {
+		cur = cur->next;
+	}
         cur->next = new_elem;
-    } else *lst = new_elem;
+    } 
+    else *lst = new_elem;
 }
 
 void list_destroy(List *lst) {
-    if (!lst) return;
-    if (*lst) {
+    if (lst == NULL) return;
+    if (*lst != NULL) {
         Node *cur = *lst, *next;
-        while (cur) {
+        while (cur != NULL) {
             next = cur->next;
             free(cur->value);
             free(cur);
@@ -45,23 +48,26 @@ void list_destroy(List *lst) {
 }
 
 void list_print(List *lst) {
-    if (!lst) printf("Null list!\n");
-    if (*lst) {
+    if (lst == NULL) printf("Null list!\n");
+    if (*lst != NULL) {
         Node *cur = *lst;
-        while (cur) {
+        while (cur != NULL) {
             printf("%s", cur->value);
             cur = cur->next;
         }
-    } else printf("Empty list!\n");
+    } 
+    else printf("Empty list!\n");
 }
 
 int main() {
     char buf[BUFSIZ];
     List *lst = list_create();
 
-    while (fgets(buf, BUFSIZ, stdin)) {
+    char *fgets_res = fgets(buf, BUFSIZ, stdin);
+    while (fgets_res != NULL) {
         if (buf[0] == '.') break;
         list_add(lst, buf);
+	fgets_res = fgets(buf, BUFSIZ, stdin);
     }
 
     list_print(lst);
