@@ -5,27 +5,27 @@
 
 extern char *tzname[];
 
-#define ERR_SET_ENV_VAR -1
+#define ERR_SETENV -1
 
 int main() {
-    time_t now;
-    struct tm *tm;
+    time_t now_sec;
+    struct tm *now_full;
 
-    int setenv_res = setenv("TZ", "PST8PDT", 1);
-    if (setenv_res == ERR_SET_ENV_VAR) {
-	perror("Unable to set TZ environment varialbe: ");
+    int setenv_ret = setenv("TZ", "PST8PDT", 1);
+    if (setenv_ret == ERR_SETENV) {
+	perror("Unable to set TZ environment variable");
     }
 	
-    (void) time(&now);
-    printf("%s", ctime(&now));     
+    (void) time(&now_sec);
+    printf("%s", ctime(&now_sec));     
 
-    tm = localtime(&now);
+    now_full = localtime(&now_sec);
     printf("%d/%d/%02d %d:%02d %s\n", 
-		    tm->tm_mon + 1, 
-		    tm->tm_mday, 
-		    tm->tm_year + 1900,
-		    tm->tm_hour, 
-		    tm->tm_min, 
-		    tzname[tm->tm_isdst]);
+		    now_full->tm_mon + 1, 
+		    now_full->tm_mday, 
+		    now_full->tm_year + 1900,
+		    now_full->tm_hour, 
+		    now_full->tm_min, 
+		    tzname[now_full->tm_isdst]);
     exit(0);
 }
