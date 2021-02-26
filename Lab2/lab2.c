@@ -11,8 +11,8 @@ int main() {
     time_t now_sec;
     struct tm *now_full;
 
-    int setenv_ret = setenv("TZ", "PST8PDT", 1);
-    if (setenv_ret == ERR_SETENV) {
+    int setenv_res = setenv("TZ", "PST8PDT", 1);
+    if (setenv_res == ERR_SETENV) {
 	perror("Unable to set TZ environment variable");
     }
 	
