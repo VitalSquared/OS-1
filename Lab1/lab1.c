@@ -17,6 +17,7 @@ extern char **environ;
 int main(int argc, char **argv) {
 	int curarg, putenv_res, setrlimit_res, ulimit_res;
 	char options[] = "ispuU:cC:dvV:";
+	char *dir = NULL;
 	struct rlimit rlp;
 	if (argc < 2) {
 		printf("Usage: %s [-i] [-s] [-p] [-u] [-Uvalue] [-c] [-Cvalue] [-d] [-v] [-Vvalue]\n", argv[0]);
@@ -61,7 +62,9 @@ int main(int argc, char **argv) {
 					perror("Can't change core size");
 				break;
 			case 'd':
-				printf("Current working directiry is: %s\n", getcwd(NULL, 100));
+				dir = getcwd(NULL, 255);
+				printf("Current working directiry is: %s\n", dir);
+				free(dir);
 				break;
 			case 'v':
 				printf("Environment variables are:\n");
