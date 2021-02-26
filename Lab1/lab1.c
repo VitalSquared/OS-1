@@ -11,7 +11,8 @@ extern char **environ;
 #define PUTENV_SUCCESS 0
 #define ERR_SETRLIMIT -1
 #define ERR_ULIMIT -1
-#define INVALID_ARG -1
+#define END_OF_ARGS -1
+#define INVALID_ARG '?'
 
 int main(int argc, char **argv) {
 	int curarg, putenv_res, setrlimit_res, ulimit_res;
@@ -23,7 +24,7 @@ int main(int argc, char **argv) {
 	}
 	while (1) {
 		curarg = getopt(argc, argv, options);
-		if (curarg == INVALID_ARG) break;
+		if (curarg == END_OF_ARGS || curarg == INVALID_ARG) break;
 		switch(curarg) {
 			case 'i':
 				printf("user id = %u\n", getuid());
@@ -42,7 +43,7 @@ int main(int argc, char **argv) {
 			case 'U':
 				ulimit_res = ulimit(UL_SETFSIZE, atol(optarg));
 				if (ulimit_res == ERR_ULIMIT) {
-					perror("Must be super-user to increase ulimit");
+					perror("Can't change ulimit value");
 				}
 				break;
 			case 'u':
@@ -57,7 +58,7 @@ int main(int argc, char **argv) {
 				rlp.rlim_cur = atol(optarg);
 				setrlimit_res = setrlimit(RLIMIT_CORE, &rlp);
 				if (setrlimit_res == ERR_SETRLIMIT)
-					perror("Must be super-user to increase core");
+					perror("Can't change core size");
 				break;
 			case 'd':
 				printf("Current working directiry is: %s\n", getcwd(NULL, 100));
@@ -76,5 +77,5 @@ int main(int argc, char **argv) {
 				break;
 		}
 	}
-	return 0;
+	exit(0);
 }
