@@ -7,16 +7,19 @@
 #include <stdio.h>
 
 extern char **environ;
+extern int optopt;
 
 #define PUTENV_SUCCESS 0
 #define ERR_SETRLIMIT -1
 #define ERR_ULIMIT -1
-#define END_OF_ARGS -1
-#define INVALID_ARG '?'
+
+#define END_OF_OPTIONS -1
+#define INVALID_OPTION '?'
+#define MISSING_ARG ':'
 
 int main(int argc, char **argv) {
 	int curarg, putenv_res, setrlimit_res, ulimit_res;
-	char options[] = "ispuU:cC:dvV:";
+	char options[] = ":ispuU:cC:dvV:";
 	char *dir = NULL;
 	struct rlimit rlp;
 	if (argc < 2) {
@@ -25,7 +28,17 @@ int main(int argc, char **argv) {
 	}
 	while (1) {
 		curarg = getopt(argc, argv, options);
-		if (curarg == END_OF_ARGS || curarg == INVALID_ARG) break;
+		
+		if (curarg == END_OF_OPTIONS) break;
+	        if (curarg == INVALID_OPTION) {
+			fprintf(stderr, "Unrecognized option: -%c\n", optopt);
+			break;
+		}
+		if (curarg == MISSING_ARG) {
+			fprintf(stderr, "Option -%c requires an argument\n", optopt);
+			break;
+		}
+		
 		switch(curarg) {
 			case 'i':
 				printf("user id = %u\n", getuid());
@@ -62,7 +75,7 @@ int main(int argc, char **argv) {
 					perror("Can't change core size");
 				break;
 			case 'd':
-				dir = getcwd(NULL, 255);
+				dir = getcwd(NULL, 256);
 				printf("Current working directiry is: %s\n", dir);
 				free(dir);
 				break;
