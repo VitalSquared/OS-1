@@ -4,9 +4,6 @@
 #include <errno.h>
 #include "list.h"
 
-#define LIST_ERROR -1
-#define LIST_SUCCESS 0
-
 extern int errno;
 
 List *list_create() {
