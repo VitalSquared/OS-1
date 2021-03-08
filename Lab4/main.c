@@ -32,7 +32,7 @@ int main() {
 		}
 	} while(1);
 	
-	free(buf);
+	if (buf != NULL) free(buf);
 	
 	list_print(lst);
 	list_destroy(lst);

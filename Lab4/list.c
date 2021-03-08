@@ -34,10 +34,10 @@ int list_add(List *lst, const char *value) {
     new_elem->next = NULL;
     strcpy(new_elem->value, value);
 
-    if (lst->head != NULL || lst->last != NULL) {
+    if (lst->head != NULL && lst->last != NULL) {
         lst->last->next = new_elem;
     }
-    else if (lst->head == NULL || lst->last == NULL) {
+    else if (lst->head == NULL && lst->last == NULL) {
         lst->head = new_elem;
     }
     else {
