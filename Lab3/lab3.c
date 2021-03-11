@@ -7,10 +7,10 @@ int main(int argc, char **argv) {
 	FILE *file;
 
 	printf("Real user id: %d,  effective user id: %d\n", getuid(), geteuid());
-	file = fopen(argv[1], "r");
-	if (!file) {
-		perror("File not opened at first try\n");
-		exit(1);
+	file = fopen("file", "r");
+	if (file == NULL) {
+		perror("File not opened at first try");
+		exit(0);
 	}
 	else {
 		printf("File opened at first try\n");
@@ -20,10 +20,10 @@ int main(int argc, char **argv) {
 	seteuid(getuid());
 
 	printf("New real user id: %d,  new effective user id: %d\n", getuid(), geteuid());
-	file = fopen(argv[1], "r");
-	if (!file) {
-		perror("File not opened at second try\n");
-		exit(1);
+	file = fopen("file", "r");
+	if (file == NULL) {
+		perror("File not opened at second try");
+		exit(0);
 	}
 	else {
 		printf("File opened at second try\n");
