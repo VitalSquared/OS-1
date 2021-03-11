@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
 					perror("Can't change core size");
 				break;
 			case 'd':
-				dir = getcwd(NULL, 256);
+				dir = getcwd(NULL, 512);
 				printf("Current working directiry is: %s\n", dir);
 				free(dir);
 				break;
