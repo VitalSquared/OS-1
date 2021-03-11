@@ -4,51 +4,58 @@
 #include <string.h>
 
 #define NO_ERROR 0
+#define LINESZ 128
+#define TRUE 1
 
 extern int errno;
 
-int read_line(char **buf, int *size, FILE *stream) {
-    if (buf == NULL || size == NULL || stream == NULL || (*buf != NULL && *size <= 0)) {
+ssize_t read_line(char **lineptr, size_t *n, FILE *stream) {
+    if (lineptr == NULL || n == NULL || stream == NULL) {
         errno = EINVAL;
         return READ_ERROR;
     }
 
-    int buf_size;
-    if (*buf == NULL) {
-        buf_size = BUFSIZ;
-        *buf = (char *)malloc(buf_size * sizeof(char));
+    char delimiter = '\n';
+    char *ptr = *lineptr;
+    size_t size;
+    ssize_t cnt;
+
+    if (*lineptr == NULL || *n < LINESZ) {
+        ptr = (char *)realloc(*lineptr, LINESZ * sizeof(char));
     }
-    else {
-        buf_size = *size;
+    if (ptr == NULL) {
+	errno = ENOMEM;
+	return READ_ERROR;
     }
 
-    int result = READ_SUCCESS;
+    *lineptr = ptr;
+    size = LINESZ;
+    *n = size;
+    cnt = 0;
 
     do {
-        char *fgets_res = fgets(*buf, buf_size, stream);
-        if (fgets_res == NULL) {
-           if (errno == NO_ERROR) {
-               result = READ_SUCCESS_EOF;
-               break;
-           }
-           else {
-               return READ_ERROR;
-           }
+        char *fgets_res = fgets(ptr, LINESZ, stream);
+        if (fgets_res == NULL && errno != NO_ERROR) {
+           return READ_ERROR;
         }
 
-        int buf_len = strlen(*buf);
-        if ((*buf)[buf_len - 1] == '\n') {
+        int length = strlen(ptr);
+	cnt += length;
+
+	if (length < (LINESZ - 1) || ptr[length - 1] == delimiter) {
             break;
         }
 
-        buf_size *= 2;
-        char* realloc_res = (char *)realloc(*buf, buf_size * sizeof(char));
-        if (realloc_res == NULL) {
+        ptr = (char *)realloc(*lineptr, 2 * size * sizeof(char));
+        if (ptr == NULL) {
             return READ_ERROR;
         }
-    } while (1);
+	size *= 2;
+	*n = size;
+	*lineptr = ptr;
+	ptr = *lineptr + cnt;
+    } while (TRUE);
 
-    *size = buf_size;
-    return result;
+    return cnt;
 }
 
