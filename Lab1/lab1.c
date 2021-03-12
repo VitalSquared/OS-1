@@ -10,7 +10,7 @@ extern char **environ;
 extern int optopt;
 
 #define PUTENV_SUCCESS 0
-#define ERR_SETRLIMIT -1
+#define ERR_RLIMIT -1
 #define ERR_ULIMIT -1
 
 #define END_OF_OPTIONS -1
@@ -20,7 +20,8 @@ extern int optopt;
 #define TRUE 1
 
 int main(int argc, char **argv) {
-	int curarg, putenv_res, setrlimit_res, ulimit_res;
+	int curarg, putenv_res, rlimit_res;
+        long ulimit_res;
 	char options[] = ":ispuU:cC:dvV:";
 	char *dir = NULL;
 	struct rlimit rlp;
@@ -63,18 +64,25 @@ int main(int argc, char **argv) {
 				}
 				break;
 			case 'u':
-				printf("ulimit = %ld\n", ulimit(UL_GETFSIZE));
+				ulimit_res = ulimit(UL_GETFSIZE);
+				if (ulimit_res == ERR_ULIMIT) 
+					perror("Can't get ulimit value");
+				else 
+					printf("ulimit = %ld\n", ulimit_res);
 				break;
 			case 'c':
-				getrlimit(RLIMIT_CORE, &rlp);
-				printf("core size = %ld\n", rlp.rlim_cur);
+				rlimit_res = getrlimit(RLIMIT_CORE, &rlp);
+				if (rlimit_res == ERR_RLIMIT)
+					perror("Can't get core-file size");
+				else 
+					printf("core size = %ld\n", rlp.rlim_cur);
 				break;
 			case 'C':
 				getrlimit(RLIMIT_CORE, &rlp);
 				rlp.rlim_cur = atol(optarg);
-				setrlimit_res = setrlimit(RLIMIT_CORE, &rlp);
-				if (setrlimit_res == ERR_SETRLIMIT)
-					perror("Can't change core size");
+				rlimit_res = setrlimit(RLIMIT_CORE, &rlp);
+				if (rlimit_res == ERR_RLIMIT)
+					perror("Can't change core-file size");
 				break;
 			case 'd':
 				dir = getcwd(NULL, 512);
