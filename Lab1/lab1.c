@@ -17,6 +17,8 @@ extern int optopt;
 #define INVALID_OPTION '?'
 #define MISSING_ARG ':'
 
+#define TRUE 1
+
 int main(int argc, char **argv) {
 	int curarg, putenv_res, setrlimit_res, ulimit_res;
 	char options[] = ":ispuU:cC:dvV:";
@@ -26,7 +28,7 @@ int main(int argc, char **argv) {
 		printf("Usage: %s [-i] [-s] [-p] [-u] [-Uvalue] [-c] [-Cvalue] [-d] [-v] [-Vvalue]\n", argv[0]);
 		exit(0);
 	}
-	while (1) {
+	while (TRUE) {
 		curarg = getopt(argc, argv, options);
 		
 		if (curarg == END_OF_OPTIONS) break;
