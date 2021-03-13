@@ -12,7 +12,7 @@ extern int optopt;
 #define PUTENV_SUCCESS 0
 #define ERR_RLIMIT -1
 #define ERR_ULIMIT -1
-
+#define ERR_SETPGID -1
 #define END_OF_OPTIONS -1
 #define INVALID_OPTION '?'
 #define MISSING_ARG ':'
@@ -20,7 +20,7 @@ extern int optopt;
 #define TRUE 1
 
 int main(int argc, char **argv) {
-	int curarg, putenv_res, rlimit_res;
+	int curarg, putenv_res, rlimit_res, setpgid_res;
         long ulimit_res;
 	char options[] = ":ispuU:cC:dvV:";
 	char *dir = NULL;
@@ -50,7 +50,10 @@ int main(int argc, char **argv) {
 				printf("effective group id = %u\n", getegid());
 				break;
 			case 's':
-				(void) setpgid(0, 0);
+				setpgid_res = setpgid(0, 0);
+				if (setpgid_res == ERR_SETPGID) {
+					perror("Can't set process group ID");
+				}
 				break;
 			case 'p':
 				printf("process id = %u\n", getpid());
@@ -85,7 +88,7 @@ int main(int argc, char **argv) {
 					perror("Can't change core-file size");
 				break;
 			case 'd':
-				dir = getcwd(NULL, 512);
+				dir = getcwd(NULL, 0);
 				printf("Current working directiry is: %s\n", dir);
 				free(dir);
 				break;
