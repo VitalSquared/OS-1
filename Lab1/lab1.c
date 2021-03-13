@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <sys/resource.h>
 #include <sys/time.h>
+#include <limits.h>
 #include <unistd.h>
 #include <ulimit.h>
 #include <stdlib.h>
@@ -88,9 +89,13 @@ int main(int argc, char **argv) {
 					perror("Can't change core-file size");
 				break;
 			case 'd':
-				dir = getcwd(NULL, 0);
-				printf("Current working directiry is: %s\n", dir);
-				free(dir);
+				dir = getcwd(NULL, PATH_MAX);
+				if (dir == NULL) 
+					perror("Can't get current working directory");
+				else {
+					printf("Current working directiry is: %s\n", dir);
+					free(dir);
+				}
 				break;
 			case 'v':
 				printf("Environment variables are:\n");
