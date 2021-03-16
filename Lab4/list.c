@@ -12,21 +12,27 @@ List *list_create() {
         lst->head = NULL;
         lst->last = NULL;
     }
+    else {
+	perror("Can't create list");
+    }
     return lst;
 }
 
 int list_add(List *lst, const char *value) {
     if (lst == NULL || value == NULL) {
         errno = EINVAL;
+	perror("Can't add element to list");
         return LIST_ERROR;
     }
 
     Node *new_elem = (Node *) malloc(sizeof(Node));
     if (new_elem == NULL) {
+	perror("Can't allocate memory for element of list");
         return LIST_ERROR;
     }
     new_elem->value = (char *) malloc(strlen(value) + 1);
     if (new_elem->value == NULL) {
+	perror("Can't allocate memory for value of list");
         free(new_elem);
         return LIST_ERROR;
     }
@@ -42,6 +48,9 @@ int list_add(List *lst, const char *value) {
     }
     else {
         errno = EINVAL;
+	perror("Can't add element to list");
+	free(new_elem->value);
+	free(new_elem);
         return LIST_ERROR;
     }
     lst->last = new_elem;
