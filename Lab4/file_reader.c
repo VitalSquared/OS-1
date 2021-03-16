@@ -21,11 +21,11 @@ ssize_t read_line(char **lineptr, size_t *n, FILE *stream) {
     ssize_t cnt;
 
     if (*lineptr == NULL || *n < LINESZ) {
-        ptr = (char *)realloc(*lineptr, LINESZ * sizeof(char));
+	    ptr = (char *)realloc(*lineptr, LINESZ * sizeof(char));
     }
     if (ptr == NULL) {
-	errno = ENOMEM;
-	return READ_ERROR;
+	    perror("Can't allocate memory");
+	    return READ_ERROR;
     }
 
     *lineptr = ptr;
@@ -36,10 +36,18 @@ ssize_t read_line(char **lineptr, size_t *n, FILE *stream) {
     do {
         char *fgets_res = fgets(ptr, LINESZ, stream);
         if (fgets_res == NULL && errno != NO_ERROR) {
-           return READ_ERROR;
+           	perror("Can't read from file");
+		return READ_ERROR;
         }
 
-        int length = strlen(ptr);
+        int length = 0;
+       	if (ptr == NULL) {
+		fprintf(stderr, "Can't get length of string\n");
+		return READ_ERROR;
+	}
+	else {
+		length = strlen(ptr);
+	}
 	cnt += length;
 
 	if (length < (LINESZ - 1) || ptr[length - 1] == delimiter) {
@@ -48,7 +56,8 @@ ssize_t read_line(char **lineptr, size_t *n, FILE *stream) {
 
         ptr = (char *)realloc(*lineptr, 2 * size * sizeof(char));
         if (ptr == NULL) {
-            return READ_ERROR;
+		perror("Can't allocate memory");
+            	return READ_ERROR;
         }
 	size *= 2;
 	*n = size;
