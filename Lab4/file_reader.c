@@ -12,6 +12,7 @@ extern int errno;
 ssize_t read_line(char **lineptr, size_t *n, FILE *stream) {
     if (lineptr == NULL || n == NULL || stream == NULL) {
         errno = EINVAL;
+	perror("Can't read line");
         return READ_ERROR;
     }
 
