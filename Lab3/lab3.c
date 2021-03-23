@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define ERROR_SETUID -1
+
 int main(int argc, char **argv) {
 	FILE *file;
 
@@ -17,7 +19,11 @@ int main(int argc, char **argv) {
 		fclose(file);
 	}
 
-	seteuid(getuid());
+	int setuid_res = seteuid(getuid());
+	if (setuid_res == ERROR_SETUID) {
+		perror("Can't change effective user id");
+		return 0;
+	}
 
 	printf("New real user id: %d,  new effective user id: %d\n", getuid(), geteuid());
 	file = fopen("file", "r");
