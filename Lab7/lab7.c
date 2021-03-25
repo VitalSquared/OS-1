@@ -98,13 +98,13 @@ line_info *create_table(void *file_addr, off_t file_size, long long *table_lengt
 	return table;
 }
 
-int write_to_file(int fildes, const void *buf, size_t nbytes, int with_new_line) {
+int write_to_file(int fildes, const void *buf, size_t nbytes, int new_line) {
 	int write_check = write(fildes, buf, nbytes);
 	if (write_check == ERROR_WRITE) {
 		perror("Can't write to file");
 		return ERROR_WRITE;
 	}
-	if (with_new_line == WITH_NEW_LINE) {
+	if (new_line == WITH_NEW_LINE) {
 		return write_to_file(fildes, "\n", 1, WITHOUT_NEW_LINE);
 	}
 	return SUCCESS_WRITE;
