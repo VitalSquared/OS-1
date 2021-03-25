@@ -23,13 +23,13 @@
 
 #define READ_EOF 0
 #define TABLE_INIT_SIZE 100
-#define CONSOLE_INPUT_SIZE 128
+#define INPUT_SIZE 64
 #define TRUE 1
 #define STOP_INPUT 0
 #define DECIMAL_SYSTEM 10
 
 typedef struct line_info {
-	size_t offset;
+	off_t offset;
 	size_t length;
 } line_info;
 
@@ -67,7 +67,12 @@ line_info *create_table(int fildes, size_t *table_length) {
 
 	char c;
 	ssize_t read_check;
-	size_t line_length = 0, offset = lseek(fildes, 0L, SEEK_SET);
+	size_t line_length = 0;
+        off_t offset = lseek(fildes, 0L, SEEK_SET);
+	if (offset == ERROR_LSEEK) {
+		perror("Can't get/set position in file");
+		return NULL;
+	}
 	do {
 		read_check = read(fildes, &c, 1);
 		if (read_check == ERROR_READ) {
@@ -92,13 +97,12 @@ line_info *create_table(int fildes, size_t *table_length) {
 			(*table_length)++;
 
 			line_length = 0;
-			off_t lseek_check = lseek(fildes, 0L, SEEK_CUR);
-			if (lseek_check == ERROR_LSEEK) {
+			offset = lseek(fildes, 0L, SEEK_CUR);
+			if (offset == ERROR_LSEEK) {
 				free(table);
-				perror("Can't get position in file");
+				perror("Can't get/set position in file");
 				return NULL;
 			}
-			offset = lseek_check;
 			continue;
 		} 
 		line_length++;
@@ -108,21 +112,32 @@ line_info *create_table(int fildes, size_t *table_length) {
 }
 
 int get_line_number(long long *line_num) {
-	char console_input[CONSOLE_INPUT_SIZE]; 
+	char input[INPUT_SIZE + 1]; 
 	
 	printf("Enter line number: ");
-	fflush(stdout);
+	int fflush_check = fflush(stdout);
+	if (fflush_check == EOF) {
+		perror("Can't flush stdout");
+		return ERROR_GET_LINE_NUMBER;
+	}
 
-        int read_check = read(STDIN_FILENO, console_input, CONSOLE_INPUT_SIZE);
-	if (read_check == ERROR_READ) {
+        ssize_t bytes_read = read(STDIN_FILENO, input, INPUT_SIZE);
+	if (bytes_read == ERROR_READ) {
 		perror("Can't get line number");
 		return ERROR_GET_LINE_NUMBER;
-	}				        
-	int bytes_read = read_check;
+	}				   
+   	input[bytes_read] = '\0';
+	if (input[bytes_read - 1] == '\n') {
+		input[bytes_read - 1] = '\0';
+		bytes_read--;
+	}
 
-        char* endptr = console_input;
-	*line_num = strtoll(console_input, &endptr, DECIMAL_SYSTEM);	
-	if (console_input <= endptr && endptr < console_input + bytes_read - 1) {
+	char *ptr_first_char = input;
+        char *ptr_last_char = input + bytes_read - 1;
+	char *endptr = input;
+
+	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
+	if (ptr_first_char <= endptr && endptr <= ptr_last_char) {
 		fprintf(stderr, "Number contains invalid symbols\n");
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
@@ -130,10 +145,10 @@ int get_line_number(long long *line_num) {
 	return SUCCESS_GET_LINE_NUMBER;
 }
 
-int read_line(int fildes, size_t offset, size_t length, char *buf) {
+int read_line(int fildes, off_t offset, size_t length, char *buf) {
 	off_t lseek_check = lseek(fildes, offset, SEEK_SET);
 	if (lseek_check == ERROR_LSEEK) {
-		perror("Can't set position in file");
+		perror("Can't get/set position in file");
 		return ERROR_READ;
 	}
 	int read_check = read(fildes, buf, length);
@@ -180,7 +195,7 @@ int main(int argc, char** argv) {
 			break;
 		}
 
-		size_t offset = table[line_num - 1].offset;
+		off_t offset = table[line_num - 1].offset;
 		size_t length = table[line_num - 1].length;
 		
 		char buf[length + 1];
