@@ -9,15 +9,18 @@
 #define ERROR_OPEN_FILE -1
 #define ERROR_CLOSE_FILE -1
 #define ERROR_READ -1
+#define ERROR_WRITE -1
 #define ERROR_ADD_TO_TABLE -1
 #define ERROR_GET_LINE_NUMBER -1
 #define ERROR_LSEEK -1
 #define ERROR_PRINT_FILE -1
+#define ERROR_SELECT -1
 #define SUCCESS_CLOSE_FILE 0
 #define SUCCESS_READ 0
 #define SUCCESS_WRITE 0
 #define SUCCESS_GET_LINE_NUMBER 1
 #define SUCCESS_PRINT_FILE 0
+#define SUCCESS_SELECT 1
 #define GET_LINE_NUMBER_TIMEOUT 2
 #define INVALID_LINE_NUMBER_INPUT 0
 #define READ_EOF 0
@@ -25,14 +28,14 @@
 #define INPUT_SIZE 128
 #define BUFFER_SIZE 256
 #define TRUE 1
-#define FD_ISSET_FALSE 0
+#define FALSE 0
 #define STOP_INPUT 0
 #define DECIMAL_SYSTEM 10
 #define MAX_DP 1
-#define NO_REACTION 0
+#define SELECT_NO_REACTION 0
+#define SELECT_WRONG_DESC 2
 #define TIMEOUT_SEC 5
 #define TIMEOUT_USEC 0
-#define SELECT_ERROR -1
 
 typedef struct line_info {
 	off_t offset;
@@ -119,16 +122,16 @@ line_info *create_table(int fildes, long long *table_length) {
 	return table;
 }
 
-int get_line_number(long long *line_num) {
-	char input[INPUT_SIZE + 1]; 
-	
-	printf("Five seconds to enter line number: ");
-	int fflush_check = fflush(stdout);
-	if (fflush_check == EOF) {
-		perror("Can't flush stdout");
-		return ERROR_GET_LINE_NUMBER;
+int write_to_file(int fildes, const void *buf, size_t nbytes) {
+	int write_check = write(fildes, buf, nbytes);
+	if (write_check == ERROR_WRITE) {
+		perror("Can't write to file");
+		return ERROR_WRITE;
 	}
+	return SUCCESS_WRITE;
+}
 
+int wait_for_input() {
    	fd_set read_descriptors;
         struct timeval timeout;
 	int result;
@@ -141,31 +144,60 @@ int get_line_number(long long *line_num) {
 
 	result = select(MAX_DP, &read_descriptors, NULL, NULL, &timeout);
 
-    	if (result == SELECT_ERROR) {
+    	if (result == ERROR_SELECT) {
         	perror("Select error");
-        	return ERROR_GET_LINE_NUMBER;
+        	return ERROR_SELECT;
     	}
 
-    	if (result == NO_REACTION) {
-		printf("Time is out!\n");
-		fflush(stdout);
+    	if (result == SELECT_NO_REACTION) {
+		int write_check = write_to_file(STDOUT_FILENO, "Time is out!\n", 13);
+		if (write_check == ERROR_WRITE) {
+			return ERROR_SELECT;
+		}
+		return SELECT_NO_REACTION;
+    	}
+
+    	if (FD_ISSET(STDIN_FILENO, &read_descriptors) == FALSE) {
+		int write_check = write_to_file(STDERR_FILENO, "Input was taken outside of STDOUT\n", 34);
+		if (write_check == ERROR_WRITE) {
+			return ERROR_SELECT;
+		}
+        	return SELECT_WRONG_DESC;
+    	}
+	return SUCCESS_SELECT;
+}
+
+int get_line_number(long long *line_num) {
+	char input[INPUT_SIZE + 1]; 
+	
+	int write_check = write_to_file(STDOUT_FILENO, "Five seconds to enter line number: ", 35); 
+	if (write_check == ERROR_WRITE) {
+		return ERROR_GET_LINE_NUMBER;
+	}
+
+	int wait_check = wait_for_input();
+	if (wait_check == ERROR_SELECT || wait_check == SELECT_WRONG_DESC) {
+		return INVALID_LINE_NUMBER_INPUT;
+	}
+	if (wait_check == SELECT_NO_REACTION) {
 		return GET_LINE_NUMBER_TIMEOUT;
-    	}
-
-    	if (FD_ISSET(STDIN_FILENO, &read_descriptors) == FD_ISSET_FALSE) {
-		fprintf(stderr, "Input was taken from outside of STDOUT\n");
-        	return INVALID_LINE_NUMBER_INPUT;
-    	}
+	}
 
         ssize_t bytes_read = read(STDIN_FILENO, input, INPUT_SIZE);
 	if (bytes_read == ERROR_READ) {
 		perror("Can't get line number");
 		return ERROR_GET_LINE_NUMBER;
-	}				   
+	}	
+	if (bytes_read == 0) {
+		return INVALID_LINE_NUMBER_INPUT;
+	}	
    	input[bytes_read] = '\0';
 	if (input[bytes_read - 1] == '\n') {
 		input[bytes_read - 1] = '\0';
 		bytes_read--;
+	}
+	if (bytes_read == 0) {
+		return INVALID_LINE_NUMBER_INPUT;
 	}
 
 	char *ptr_first_char = input;
@@ -174,7 +206,10 @@ int get_line_number(long long *line_num) {
 
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
 	if (ptr_first_char <= endptr && endptr <= ptr_last_char) {
-		fprintf(stderr, "Number contains invalid symbols\n");
+		int write_check = write_to_file(STDOUT_FILENO, "Number contains invalid symbols\n", 32); 
+		if (write_check == ERROR_WRITE) {
+			return ERROR_GET_LINE_NUMBER;
+		}
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
 
