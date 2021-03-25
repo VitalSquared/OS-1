@@ -259,52 +259,53 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	int fildes = open_file(argv[1]);
+	int fildes = open(argv[1], O_RDONLY);
 	if (fildes == ERROR_OPEN_FILE) {
+		perror("Can't open file");
 		return 0;
 	}	
 
 	long long table_length = 0;
 	line_info *table = create_table(fildes, &table_length);
-	if (table == NULL) {
-		close_file(fildes);
-		return 0;
-	}
+	if (table != NULL) {
+		while(TRUE) {	
+			long long line_num;
+			int get_line_num_check = get_line_number(&line_num);
+			if (get_line_num_check == ERROR_GET_LINE_NUMBER) {
+				break;   
+			}
+			if (get_line_num_check == INVALID_LINE_NUMBER_INPUT) {
+				continue;
+			}
+			if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
+				printf("Printing out your file: \n");
+				print_file(fildes);
+				break;
+			}
+			if (line_num < 0 || line_num > table_length) {
+				fprintf(stderr, "Invalid line number. It has to be in range [0, %lld]\n", table_length);
+				continue;
+			}
+			if (line_num == STOP_INPUT) {
+				break;
+			}
 
-	while(TRUE) {	
-		long long line_num;
-	        int get_line_num_check = get_line_number(&line_num);
-		if (get_line_num_check == ERROR_GET_LINE_NUMBER) {
-			break;   
+			off_t offset = table[line_num - 1].offset;
+			size_t length = table[line_num - 1].length;
+			
+			char buf[length + 1];
+			int read_check = read_line(fildes, offset, length, buf);
+			if (read_check == ERROR_READ) {
+				break;
+			}
+			printf("%s\n", buf);
 		}
-		if (get_line_num_check == INVALID_LINE_NUMBER_INPUT) {
-			continue;
-		}
-		if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
-			printf("Printing out your file: \n");
-			print_file(fildes);
-			break;
-		}
-		if (line_num < 0 || line_num > table_length) {
-			fprintf(stderr, "Invalid line number. It has to be in range [0, %lld]\n", table_length);
-			continue;
-		}
-		if (line_num == STOP_INPUT) {
-			break;
-		}
-
-		off_t offset = table[line_num - 1].offset;
-		size_t length = table[line_num - 1].length;
-		
-		char buf[length + 1];
-		int read_check = read_line(fildes, offset, length, buf);
-		if (read_check == ERROR_READ) {
-			break;
-		}
-		printf("%s\n", buf);
 	}
 
 	free(table);
-	close_file(fildes); 
+	int close_check = close(fildes); 
+	if (close_check == ERROR_CLOSE_FILE) {
+		perror("Can't close file");
+	}
 	return 0;
 }
