@@ -1,58 +1,275 @@
 #include <sys/types.h>
+#include <sys/select.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#define ERROR_OPEN_FILE -1
+#define ERROR_CLOSE_FILE -1
+#define ERROR_READ -1
+#define ERROR_ADD_TO_TABLE -1
+#define ERROR_GET_LINE_NUMBER -1
+#define ERROR_LSEEK -1
+#define ERROR_PRINT_FILE -1
+#define SUCCESS_CLOSE_FILE 0
+#define SUCCESS_READ 0
+#define SUCCESS_WRITE 0
+#define SUCCESS_GET_LINE_NUMBER 1
+#define SUCCESS_PRINT_FILE 0
+#define GET_LINE_NUMBER_TIMEOUT 2
+#define INVALID_LINE_NUMBER_INPUT 0
+#define READ_EOF 0
+#define TABLE_INIT_SIZE 100
+#define INPUT_SIZE 128
+#define BUFFER_SIZE 256
+#define TRUE 1
+#define FD_ISSET_FALSE 0
+#define STOP_INPUT 0
+#define DECIMAL_SYSTEM 10
+#define MAX_DP 1
+#define NO_REACTION 0
+#define TIMEOUT_SEC 5
+#define TIMEOUT_USEC 0
+#define SELECT_ERROR -1
+
+typedef struct line_info {
+	off_t offset;
+	size_t length;
+} line_info;
+
+int open_file(const char *fname) {
+	int fildes = open(fname, O_RDONLY);
+	if (fildes == ERROR_OPEN_FILE) {
+		perror("Unable to open file");
+		return ERROR_OPEN_FILE;
+	}	
+	return fildes;
+}
+
+int close_file(int fildes) {
+	int close_check = close(fildes);
+	if (close_check == ERROR_CLOSE_FILE) {
+		perror("Unable to close file");
+		return ERROR_CLOSE_FILE;
+	}
+	return SUCCESS_CLOSE_FILE;
+}
+
+line_info *create_table(int fildes, long long *table_length) {
+	if (table_length == NULL) {
+		fprintf(stderr, "Can't create table: Invalid argument(s)\n");
+		return NULL;
+	}
+	
+	size_t size = TABLE_INIT_SIZE;
+	*table_length = 0;
+	line_info *table = (line_info *) malloc(size * sizeof(line_info));
+	if (table == NULL) {
+		perror("Can't create table");
+		return NULL;
+	}
+
+	char c;
+	ssize_t read_check;
+	size_t line_length = 0;
+
+        off_t offset = lseek(fildes, 0L, SEEK_SET);
+	if (offset == ERROR_LSEEK) {
+		perror("Can't get/set position in file");
+		return NULL;
+	}
+
+	do {
+		read_check = read(fildes, &c, 1);
+		if (read_check == ERROR_READ) {
+			free(table);
+			perror("Can't read from file");
+			return NULL;
+		}
+		if (read_check == READ_EOF || c == '\n') {
+			if (*table_length == size) {
+				line_info *ptr = (line_info *)realloc(table, 2 * size * sizeof(line_info));
+				if (ptr == NULL) {
+					free(table);
+					perror("Can't create table");
+					return NULL;
+				}
+				table = ptr;
+				size *= 2;
+			}
+
+			line_info elem = { .offset = offset, .length = line_length };		
+			table[*table_length] = elem;
+			(*table_length)++;
+
+			line_length = 0;
+			offset = lseek(fildes, 0L, SEEK_CUR);
+			if (offset == ERROR_LSEEK) {
+				free(table);
+				perror("Can't get/set position in file");
+				return NULL;
+			}
+			continue;
+		} 
+		line_length++;
+	} while (read_check != READ_EOF);
+
+	return table;
+}
+
+int get_line_number(long long *line_num) {
+	char input[INPUT_SIZE + 1]; 
+	
+	printf("Five seconds to enter line number: ");
+	int fflush_check = fflush(stdout);
+	if (fflush_check == EOF) {
+		perror("Can't flush stdout");
+		return ERROR_GET_LINE_NUMBER;
+	}
+
+   	fd_set read_descriptors;
+        struct timeval timeout;
+	int result;
+
+	FD_ZERO(&read_descriptors);
+	FD_SET(STDIN_FILENO, &read_descriptors);
+	
+	timeout.tv_sec = TIMEOUT_SEC;
+	timeout.tv_usec = TIMEOUT_USEC;
+
+	result = select(MAX_DP, &read_descriptors, NULL, NULL, &timeout);
+
+    	if (result == SELECT_ERROR) {
+        	perror("Select error");
+        	return ERROR_GET_LINE_NUMBER;
+    	}
+
+    	if (result == NO_REACTION) {
+		printf("Time is out!\n");
+		fflush(stdout);
+		return GET_LINE_NUMBER_TIMEOUT;
+    	}
+
+    	if (FD_ISSET(STDIN_FILENO, &read_descriptors) == FD_ISSET_FALSE) {
+		fprintf(stderr, "Input was taken from outside of STDOUT\n");
+        	return INVALID_LINE_NUMBER_INPUT;
+    	}
+
+        ssize_t bytes_read = read(STDIN_FILENO, input, INPUT_SIZE);
+	if (bytes_read == ERROR_READ) {
+		perror("Can't get line number");
+		return ERROR_GET_LINE_NUMBER;
+	}				   
+   	input[bytes_read] = '\0';
+	if (input[bytes_read - 1] == '\n') {
+		input[bytes_read - 1] = '\0';
+		bytes_read--;
+	}
+
+	char *ptr_first_char = input;
+        char *ptr_last_char = input + bytes_read - 1;
+	char *endptr = input;
+
+	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
+	if (ptr_first_char <= endptr && endptr <= ptr_last_char) {
+		fprintf(stderr, "Number contains invalid symbols\n");
+		return INVALID_LINE_NUMBER_INPUT;
+	}	
+
+	return SUCCESS_GET_LINE_NUMBER;
+}
+
+int read_line(int fildes, off_t offset, size_t length, char *buf) {
+	off_t lseek_check = lseek(fildes, offset, SEEK_SET);
+	if (lseek_check == ERROR_LSEEK) {
+		perror("Can't get/set position in file");
+		return ERROR_READ;
+	}
+	int read_check = read(fildes, buf, length);
+	if (read_check == ERROR_READ) {
+		perror("Can't read from file");
+		return ERROR_READ;
+	}
+	buf[length] = '\0';
+	return SUCCESS_READ;
+}
+
+int print_file(int fildes) {
+	off_t lseek_check = lseek(fildes, 0L, SEEK_SET);
+	if (lseek_check == ERROR_LSEEK) {
+		perror("Can't get/set file position");
+		return ERROR_PRINT_FILE;
+	}
+	char buf[BUFFER_SIZE + 1];
+	while (TRUE) {
+		int bytes_read = read(fildes, buf, BUFFER_SIZE);
+		if (bytes_read == ERROR_READ) {
+			perror("Can't read from file");
+			return ERROR_PRINT_FILE;
+		}
+		if (bytes_read == READ_EOF) {
+			break;
+		}
+		buf[bytes_read] = '\0';
+		printf("%s", buf);
+	}
+	return SUCCESS_PRINT_FILE;
+}
+
 int main(int argc, char** argv) {
 	if (argc < 2) {
-		printf("Usage: <programname> <filename>\n");
+		printf("Usage: %s <filename>\n", argv[0]);
 		return 0;
 	}
 
-	int fd = open(argv[1], O_RDONLY);
-	if (fd == -1) {
-		perror("Unable to open file\n");
+	int fildes = open_file(argv[1]);
+	if (fildes == ERROR_OPEN_FILE) {
 		return 0;
 	}	
 
-	long offsets[101] = { -1 };
-	int lineLength[101] = { -1 };
-	int bufSize = 256, i = 1, j = 0, lineNumber = 0;
-	char* buf = (char*) malloc(sizeof(char) * (bufSize + 1));
-	char c = 0;
-
-	while (read(fd, &c, 1)) {
-		j++;
-		if (c == '\n') {
-			lineLength[i++] = j;
-			offsets[i] = lseek(fd, 0L, SEEK_CUR);
-			j = 0;	
-		}
+	long long table_length = 0;
+	line_info *table = create_table(fildes, &table_length);
+	if (table == NULL) {
+		close_file(fildes);
+		return 0;
 	}
 
-	while(1) {
-		printf("Enter line number: ");
-		if (!scanf("%d", &lineNumber)) break;
-		if (lineNumber == 0) break;
-		if (lineNumber < 0 || lineNumber > 100 || lineLength[lineNumber] == -1) {
-			fprintf(stderr, "Wrong line number\n");
+	while(TRUE) {	
+		long long line_num;
+	        int get_line_num_check = get_line_number(&line_num);
+		if (get_line_num_check == ERROR_GET_LINE_NUMBER) {
+			break;   
+		}
+		if (get_line_num_check == INVALID_LINE_NUMBER_INPUT) {
 			continue;
 		}
-		lseek(fd, offsets[lineNumber], SEEK_SET);
-		if (lineLength[lineNumber] > bufSize) {
-			bufSize = lineLength[lineNumber];
-			realloc(buf, (bufSize + 1) * sizeof(char));
+		if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
+			printf("Printing out your file: \n");
+			print_file(fildes);
+			break;
 		}
-		if (read(fd, buf, lineLength[lineNumber]))
-			write(1, buf, lineLength[lineNumber]);
-		else
-			fprintf(stderr, "Wrong line number\n");
+		if (line_num < 0 || line_num > table_length) {
+			fprintf(stderr, "Invalid line number. It has to be in range [0, %lld]\n", table_length);
+			continue;
+		}
+		if (line_num == STOP_INPUT) {
+			break;
+		}
+
+		off_t offset = table[line_num - 1].offset;
+		size_t length = table[line_num - 1].length;
+		
+		char buf[length + 1];
+		int read_check = read_line(fildes, offset, length, buf);
+		if (read_check == ERROR_READ) {
+			break;
+		}
+		printf("%s\n", buf);
 	}
 
-	free(buf);
-	close(fd);
-
+	free(table);
+	close_file(fildes); 
 	return 0;
 }
