@@ -40,6 +40,8 @@
 #define SELECT_WRONG_DESC 2
 #define TIMEOUT_SEC 5
 #define TIMEOUT_USEC 0
+#define WITH_NEW_LINE 1
+#define WITHOUT_NEW_LINE 0
 
 typedef struct line_info {
 	off_t offset;
@@ -96,11 +98,14 @@ line_info *create_table(void *file_addr, off_t file_size, long long *table_lengt
 	return table;
 }
 
-int write_to_file(int fildes, const void *buf, size_t nbytes) {
+int write_to_file(int fildes, const void *buf, size_t nbytes, int with_new_line) {
 	int write_check = write(fildes, buf, nbytes);
 	if (write_check == ERROR_WRITE) {
 		perror("Can't write to file");
 		return ERROR_WRITE;
+	}
+	if (with_new_line == WITH_NEW_LINE) {
+		return write_to_file(fildes, "\n", 1, WITHOUT_NEW_LINE);
 	}
 	return SUCCESS_WRITE;
 }
@@ -124,7 +129,7 @@ int wait_for_input() {
     	}
 
     	if (result == SELECT_NO_REACTION) {
-		int write_check = write_to_file(STDOUT_FILENO, "Time is out!\n", 13);
+		int write_check = write_to_file(STDOUT_FILENO, "Time is out!\n", 13, WITHOUT_NEW_LINE);
 		if (write_check == ERROR_WRITE) {
 			return ERROR_SELECT;
 		}
@@ -132,7 +137,7 @@ int wait_for_input() {
     	}
 
     	if (FD_ISSET(STDIN_FILENO, &read_descriptors) == FALSE) {
-		int write_check = write_to_file(STDERR_FILENO, "Input was taken outside of STDOUT\n", 34);
+		int write_check = write_to_file(STDERR_FILENO, "Input was taken outside of STDOUT\n", 34, WITHOUT_NEW_LINE);
 		if (write_check == ERROR_WRITE) {
 			return ERROR_SELECT;
 		}
@@ -144,7 +149,7 @@ int wait_for_input() {
 int get_line_number(long long *line_num) {
 	char input[INPUT_SIZE + 1]; 
 	
-	int write_check = write_to_file(STDOUT_FILENO, "Five seconds to enter line number: ", 35); 
+	int write_check = write_to_file(STDOUT_FILENO, "Five seconds to enter line number: ", 35, WITHOUT_NEW_LINE); 
 	if (write_check == ERROR_WRITE) {
 		return ERROR_GET_LINE_NUMBER;
 	}
@@ -180,7 +185,7 @@ int get_line_number(long long *line_num) {
 
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
 	if (ptr_first_char <= endptr && endptr <= ptr_last_char) {
-		int write_check = write_to_file(STDOUT_FILENO, "Number contains invalid symbols\n", 32); 
+		int write_check = write_to_file(STDOUT_FILENO, "Number contains invalid symbols\n", 32, WITHOUT_NEW_LINE); 
 		if (write_check == ERROR_WRITE) {
 			return ERROR_GET_LINE_NUMBER;
 		}
@@ -231,7 +236,7 @@ int main(int argc, char** argv) {
 			}
 			if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
 				printf("Printing out your file: \n");
-				int write_check = write_to_file(STDOUT_FILENO, file_addr, file_size);
+				int write_check = write_to_file(STDOUT_FILENO, file_addr, file_size, WITH_NEW_LINE);
 				if (write_check == ERROR_WRITE) {
 					perror("Can't write to STDOUT");
 				}
@@ -248,11 +253,7 @@ int main(int argc, char** argv) {
 			off_t offset = table[line_num - 1].offset;
 			size_t length = table[line_num - 1].length;
 			
-			int write_check = write_to_file(STDOUT_FILENO, file_addr + offset, length);
-			if (write_check == ERROR_WRITE) {
-				break;
-			}
-			write_check = write_to_file(STDOUT_FILENO, "\n", 1);
+			int write_check = write_to_file(STDOUT_FILENO, file_addr + offset, length, WITH_NEW_LINE);
 			if (write_check == ERROR_WRITE) {
 				break;
 			}
