@@ -250,6 +250,7 @@ int print_file(int fildes) {
 		buf[bytes_read] = '\0';
 		printf("%s", buf);
 	}
+	printf("\n");
 	return SUCCESS_PRINT_FILE;
 }
 
