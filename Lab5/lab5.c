@@ -8,9 +8,11 @@
 #define ERROR_OPEN_FILE -1
 #define ERROR_CLOSE_FILE -1
 #define ERROR_READ -1
+#define ERROR_WRITE -1
 #define ERROR_ADD_TO_TABLE -1
 #define ERROR_GET_LINE_NUMBER -1
 #define ERROR_LSEEK -1
+#define ERROR_PRINT_FILE -1
 #define SUCCESS_CLOSE_FILE 0
 #define SUCCESS_READ 0
 #define SUCCESS_WRITE 0
@@ -108,25 +110,38 @@ line_info *create_table(int fildes, long long *table_length) {
 	return table;
 }
 
+int write_to_file(int fildes, const void *buf, size_t nbytes) {
+	int write_check = write(fildes, buf, nbytes);
+	if (write_check == ERROR_WRITE) {
+		perror("Can't write to file");
+		return ERROR_WRITE;
+	}
+	return SUCCESS_WRITE;
+}
+
 int get_line_number(long long *line_num) {
 	char input[INPUT_SIZE + 1]; 
 	
-	printf("Enter line number: ");
-	int fflush_check = fflush(stdout);
-	if (fflush_check == EOF) {
-		perror("Can't flush stdout");
+	int write_check = write_to_file(STDOUT_FILENO, "Enter line number: ", 19); 
+	if (write_check == ERROR_WRITE) {
 		return ERROR_GET_LINE_NUMBER;
-	}
-
-        ssize_t bytes_read = read(STDIN_FILENO, input, INPUT_SIZE);
+	} 
+ 
+	ssize_t bytes_read = read(STDIN_FILENO, input, INPUT_SIZE);
 	if (bytes_read == ERROR_READ) {
 		perror("Can't get line number");
 		return ERROR_GET_LINE_NUMBER;
-	}				   
+	}
+	if (bytes_read == 0) {
+		return INVALID_LINE_NUMBER_INPUT;
+	}
    	input[bytes_read] = '\0';
 	if (input[bytes_read - 1] == '\n') {
 		input[bytes_read - 1] = '\0';
 		bytes_read--;
+	}
+	if (bytes_read == 0) {
+		return INVALID_LINE_NUMBER_INPUT;
 	}
 
 	char *ptr_first_char = input;
@@ -135,7 +150,10 @@ int get_line_number(long long *line_num) {
 
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
 	if (ptr_first_char <= endptr && endptr <= ptr_last_char) {
-		fprintf(stderr, "Number contains invalid symbols\n");
+		int write_check = write_to_file(STDOUT_FILENO, "Number contains invalid symbols\n", 32); 
+		if (write_check == ERROR_WRITE) {
+			return ERROR_GET_LINE_NUMBER;
+		}
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
 
