@@ -18,9 +18,12 @@
 #define SUCCESS_READ 0
 #define SUCCESS_WRITE 0
 
+#define INVALID_LINE_NUMBER_INPUT 0
+#define SUCCESS_GET_LINE_NUMBER 1
+
 #define READ_EOF 0
 #define TABLE_INIT_SIZE 100
-#define CONSOLE_INPUT_SIZE 100
+#define CONSOLE_INPUT_SIZE 128
 #define TRUE 1
 #define STOP_INPUT 0
 #define DECIMAL_SYSTEM 10
@@ -104,27 +107,27 @@ line_info *create_table(int fildes, size_t *table_length) {
 	return table;
 }
 
-long long get_line_number() {
-        long long line_number;
-	char console_prompt[20] = "Enter line number: ";
+int get_line_number(long long *line_num) {
 	char console_input[CONSOLE_INPUT_SIZE]; 
 	
-	int write_check = write(STDOUT_FILENO, console_prompt, 20);
-	if (write_check == ERROR_WRITE) {
-		perror("Can't print prompt");
-		return ERROR_GET_LINE_NUMBER;
-	}
+	printf("Enter line number: ");
+	fflush(stdout);
 
         int read_check = read(STDIN_FILENO, console_input, CONSOLE_INPUT_SIZE);
 	if (read_check == ERROR_READ) {
 		perror("Can't get line number");
 		return ERROR_GET_LINE_NUMBER;
 	}				        
+	int bytes_read = read_check;
 
-        char* endptr = NULL;
-	line_number = strtoll(console_input, &endptr, DECIMAL_SYSTEM);	        
+        char* endptr = console_input;
+	*line_num = strtoll(console_input, &endptr, DECIMAL_SYSTEM);	
+	if (console_input <= endptr && endptr < console_input + bytes_read - 1) {
+		fprintf(stderr, "Number contains invalid symbols\n");
+		return INVALID_LINE_NUMBER_INPUT;
+	}	
 
-	return line_number;
+	return SUCCESS_GET_LINE_NUMBER;
 }
 
 int read_line(int fildes, size_t offset, size_t length, char *buf) {
@@ -138,23 +141,8 @@ int read_line(int fildes, size_t offset, size_t length, char *buf) {
 		perror("Can't read from file");
 		return ERROR_READ;
 	}
+	buf[length] = '\0';
 	return SUCCESS_READ;
-}
-
-int write_line(char *buf, size_t length) {
-	int write_check = write(STDOUT_FILENO, buf, length);
-	if (write_check == ERROR_WRITE) {
-		perror("Can't write line");
-		return ERROR_WRITE;
-	}
-
-	char new_line[2] = "\n";
-	write_check = write(STDOUT_FILENO, new_line, 1);
-	if (write_check == ERROR_WRITE) {
-		perror("Can't write line");
-		return ERROR_WRITE;
-	}
-	return SUCCESS_WRITE;
 }
 
 int main(int argc, char** argv) {
@@ -176,21 +164,31 @@ int main(int argc, char** argv) {
 	}
 
 	while(TRUE) {	
-		long long line_num = get_line_number();
-	
+		long long line_num;
+	        int get_line_num_check = get_line_number(&line_num);
+		if (get_line_num_check == ERROR_GET_LINE_NUMBER) {
+			break;   
+		}
+		if (get_line_num_check == INVALID_LINE_NUMBER_INPUT) {
+			continue;
+		}
 		if (line_num < 0 || line_num > table_length) {
 			fprintf(stderr, "Invalid line number. It has to be in range [0, %lu]\n", table_length);
 			continue;
 		}
-		if (line_num == STOP_INPUT) break;
+		if (line_num == STOP_INPUT) {
+			break;
+		}
 
 		size_t offset = table[line_num - 1].offset;
 		size_t length = table[line_num - 1].length;
 		
 		char buf[length + 1];
-		if (read_line(fildes, offset, length, buf) == ERROR_READ || write_line(buf, length) == ERROR_WRITE) {
+		int read_check = read_line(fildes, offset, length, buf);
+		if (read_check == ERROR_READ) {
 			break;
 		}
+		printf("%s\n", buf);
 	}
 
 	free(table);
