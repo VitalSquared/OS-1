@@ -8,22 +8,17 @@
 #define ERROR_OPEN_FILE -1
 #define ERROR_CLOSE_FILE -1
 #define ERROR_READ -1
-#define ERROR_WRITE -1
 #define ERROR_ADD_TO_TABLE -1
 #define ERROR_GET_LINE_NUMBER -1
-#define ERROR_PRINT -1
 #define ERROR_LSEEK -1
-
 #define SUCCESS_CLOSE_FILE 0
 #define SUCCESS_READ 0
 #define SUCCESS_WRITE 0
-
-#define INVALID_LINE_NUMBER_INPUT 0
 #define SUCCESS_GET_LINE_NUMBER 1
-
+#define INVALID_LINE_NUMBER_INPUT 0
 #define READ_EOF 0
 #define TABLE_INIT_SIZE 100
-#define INPUT_SIZE 64
+#define INPUT_SIZE 128
 #define TRUE 1
 #define STOP_INPUT 0
 #define DECIMAL_SYSTEM 10
@@ -51,7 +46,7 @@ int close_file(int fildes) {
 	return SUCCESS_CLOSE_FILE;
 }
 
-line_info *create_table(int fildes, size_t *table_length) {
+line_info *create_table(int fildes, long long *table_length) {
 	if (table_length == NULL) {
 		fprintf(stderr, "Can't create table: Invalid argument(s)\n");
 		return NULL;
@@ -68,11 +63,13 @@ line_info *create_table(int fildes, size_t *table_length) {
 	char c;
 	ssize_t read_check;
 	size_t line_length = 0;
+
         off_t offset = lseek(fildes, 0L, SEEK_SET);
 	if (offset == ERROR_LSEEK) {
 		perror("Can't get/set position in file");
 		return NULL;
 	}
+
 	do {
 		read_check = read(fildes, &c, 1);
 		if (read_check == ERROR_READ) {
@@ -171,7 +168,7 @@ int main(int argc, char** argv) {
 		return 0;
 	}	
 
-	size_t table_length = 0;
+	long long table_length = 0;
 	line_info *table = create_table(fildes, &table_length);
 	if (table == NULL) {
 		close_file(fildes);
@@ -188,7 +185,7 @@ int main(int argc, char** argv) {
 			continue;
 		}
 		if (line_num < 0 || line_num > table_length) {
-			fprintf(stderr, "Invalid line number. It has to be in range [0, %lu]\n", table_length);
+			fprintf(stderr, "Invalid line number. It has to be in range [0, %lld]\n", table_length);
 			continue;
 		}
 		if (line_num == STOP_INPUT) {
