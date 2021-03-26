@@ -42,24 +42,6 @@ typedef struct line_info {
 	size_t length;
 } line_info;
 
-int open_file(const char *fname) {
-	int fildes = open(fname, O_RDONLY);
-	if (fildes == ERROR_OPEN_FILE) {
-		perror("Unable to open file");
-		return ERROR_OPEN_FILE;
-	}	
-	return fildes;
-}
-
-int close_file(int fildes) {
-	int close_check = close(fildes);
-	if (close_check == ERROR_CLOSE_FILE) {
-		perror("Unable to close file");
-		return ERROR_CLOSE_FILE;
-	}
-	return SUCCESS_CLOSE_FILE;
-}
-
 line_info *create_table(int fildes, long long *table_length) {
 	if (table_length == NULL) {
 		fprintf(stderr, "Can't create table: Invalid argument(s)\n");
