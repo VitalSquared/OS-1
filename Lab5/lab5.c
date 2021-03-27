@@ -12,7 +12,6 @@
 #define ERROR_ADD_TO_TABLE -1
 #define ERROR_GET_LINE_NUMBER -1
 #define ERROR_LSEEK -1
-#define ERROR_PRINT_FILE -1
 
 #define SUCCESS_CLOSE_FILE 0
 #define SUCCESS_READ 0
@@ -74,7 +73,10 @@ line_info *create_table(int fildes, long long *table_length) {
 				size *= 2;
 			}
 
-			line_info elem = { .offset = offset, .length = line_length };		
+			line_info elem;	
+			elem.offset = offset;
+			elem.length = line_length;
+
 			table[*table_length] = elem;
 			(*table_length)++;
 
@@ -129,7 +131,6 @@ int get_line_number(long long *line_num) {
 		}
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
-
 	return SUCCESS_GET_LINE_NUMBER;
 }
 
@@ -139,12 +140,14 @@ int read_line(int fildes, off_t offset, size_t length, char *buf) {
 		perror("Can't get/set position in file");
 		return ERROR_READ;
 	}
+
 	int read_check = read(fildes, buf, length);
 	if (read_check == ERROR_READ) {
 		perror("Can't read from file");
 		return ERROR_READ;
 	}
 	buf[length] = '\0';
+
 	return SUCCESS_READ;
 }
 
@@ -165,16 +168,20 @@ int main(int argc, char** argv) {
 	if (table != NULL) {
 		while(TRUE) {	
 			int get_line_num_check = get_line_number(&line_num);
+
 			if (get_line_num_check == ERROR_GET_LINE_NUMBER) {
 				break;   
 			}
+
 			if (get_line_num_check == INVALID_LINE_NUMBER_INPUT) {
 				continue;
 			}
+	
 			if (line_num < 0 || line_num > table_length) {
 				fprintf(stderr, "Invalid line number. It has to be in range [0, %lld]\n", table_length);
 				continue;
 			}
+
 			if (line_num == STOP_INPUT) {
 				break;
 			}
