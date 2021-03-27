@@ -17,7 +17,7 @@
 #define ERROR_LSEEK -1
 #define ERROR_PRINT_FILE -1
 #define ERROR_SELECT -1
-#define ERROR_STAT -1
+#define ERROR_FSTAT -1
 #define ERROR_MUNMAP -1
 
 #define SUCCESS_CLOSE_FILE 0
@@ -191,20 +191,20 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	struct stat st;
-	int stat_check = stat(argv[1], &st);
-	if (stat_check == ERROR_STAT) {
-		perror("Can't get file stat");
-		return 0;
-	}
-	off_t file_size = st.st_size;
-	
 	int fildes = open(argv[1], O_RDONLY);
 	if (fildes == ERROR_OPEN_FILE) {
 		perror("Unable to open file");
 		return 0;
 	}		
 
+	struct stat st;
+	int fstat_check = fstat(fildes, &st);
+	if (fstat_check == ERROR_FSTAT) {
+		perror("Can't get file stat");
+		return 0;
+	}
+	off_t file_size = st.st_size;
+	
 	void *file_addr = mmap(0, file_size, PROT_READ, MAP_SHARED, fildes, 0);    
 	if (file_addr == MAP_FAILED) {
 		perror("Can't map file");
