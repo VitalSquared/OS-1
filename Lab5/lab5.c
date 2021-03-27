@@ -13,10 +13,12 @@
 #define ERROR_GET_LINE_NUMBER -1
 #define ERROR_LSEEK -1
 #define ERROR_PRINT_FILE -1
+
 #define SUCCESS_CLOSE_FILE 0
 #define SUCCESS_READ 0
 #define SUCCESS_WRITE 0
 #define SUCCESS_GET_LINE_NUMBER 1
+
 #define INVALID_LINE_NUMBER_INPUT 0
 #define READ_EOF 0
 #define TABLE_INIT_SIZE 100
@@ -32,7 +34,7 @@ typedef struct line_info {
 
 line_info *create_table(int fildes, long long *table_length) {
 	if (table_length == NULL) {
-		fprintf(stderr, "Can't create table: Invalid argument(s)\n");
+		fprintf(stderr, "Can't create table: Invalid argument\n");
 		return NULL;
 	}
 	
@@ -47,7 +49,6 @@ line_info *create_table(int fildes, long long *table_length) {
 	char c;
 	ssize_t read_check;
 	size_t line_length = 0;
-
         off_t offset = lseek(fildes, 0L, SEEK_SET);
 	if (offset == ERROR_LSEEK) {
 		perror("Can't get/set position in file");
@@ -118,20 +119,10 @@ int get_line_number(long long *line_num) {
 		return INVALID_LINE_NUMBER_INPUT;
 	}
    	input[bytes_read] = '\0';
-	if (input[bytes_read - 1] == '\n') {
-		input[bytes_read - 1] = '\0';
-		bytes_read--;
-	}
-	if (bytes_read == 0) {
-		return INVALID_LINE_NUMBER_INPUT;
-	}
 
-	char *ptr_first_char = input;
-        char *ptr_last_char = input + bytes_read - 1;
 	char *endptr = input;
-
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
-	if (ptr_first_char <= endptr && endptr <= ptr_last_char) {
+	if (*endptr != '\n' && *endptr != '\0') {
 		int write_check = write_to_file(STDOUT_FILENO, "Number contains invalid symbols\n", 32); 
 		if (write_check == ERROR_WRITE) {
 			return ERROR_GET_LINE_NUMBER;
@@ -169,11 +160,10 @@ int main(int argc, char** argv) {
 		return 0;
 	}	
 
-	long long table_length = 0;
+	long long table_length = 0, line_num = 0;
 	line_info *table = create_table(fildes, &table_length);
 	if (table != NULL) {
 		while(TRUE) {	
-			long long line_num;
 			int get_line_num_check = get_line_number(&line_num);
 			if (get_line_num_check == ERROR_GET_LINE_NUMBER) {
 				break;   
@@ -191,8 +181,8 @@ int main(int argc, char** argv) {
 
 			off_t offset = table[line_num - 1].offset;
 			size_t length = table[line_num - 1].length;
-			
 			char buf[length + 1];
+
 			int read_check = read_line(fildes, offset, length, buf);
 			if (read_check == ERROR_READ) {
 				break;
