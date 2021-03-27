@@ -26,7 +26,6 @@
 #define GET_LINE_NUMBER_TIMEOUT 2
 #define INVALID_LINE_NUMBER_INPUT 0
 #define SELECT_NO_REACTION 0
-#define SELECT_WRONG_DESC 2
 
 #define READ_EOF 0
 #define TABLE_INIT_SIZE 100
@@ -36,7 +35,7 @@
 #define FALSE 0
 #define STOP_INPUT 0
 #define DECIMAL_SYSTEM 10
-#define MAX_DP 1
+#define SELECT_MAX_FILDES 1
 #define TIMEOUT_SEC 5
 #define TIMEOUT_USEC 0
 
@@ -87,7 +86,10 @@ line_info *create_table(int fildes, long long *table_length) {
 				size *= 2;
 			}
 
-			line_info elem = { .offset = offset, .length = line_length };		
+			line_info elem;
+		       	elem.offset = offset;
+			elem.length = line_length;
+
 			table[*table_length] = elem;
 			(*table_length)++;
 
@@ -126,7 +128,7 @@ int wait_for_input() {
 	timeout.tv_sec = TIMEOUT_SEC;
 	timeout.tv_usec = TIMEOUT_USEC;
 
-	result = select(MAX_DP, &read_descriptors, NULL, NULL, &timeout);
+	result = select(SELECT_MAX_FILDES, &read_descriptors, NULL, NULL, &timeout);
 
     	if (result == ERROR_SELECT) {
         	perror("Select error");
@@ -142,12 +144,9 @@ int wait_for_input() {
     	}
 
     	if (FD_ISSET(STDIN_FILENO, &read_descriptors) == FALSE) {
-		int write_check = write_to_file(STDERR_FILENO, "Input was taken outside of STDOUT\n", 34);
-		if (write_check == ERROR_WRITE) {
-			return ERROR_SELECT;
-		}
-        	return SELECT_WRONG_DESC;
+        	return SELECT_NO_REACTION;
     	}
+
 	return SUCCESS_SELECT;
 }
 
@@ -160,7 +159,7 @@ int get_line_number(long long *line_num) {
 	}
 
 	int wait_check = wait_for_input();
-	if (wait_check == ERROR_SELECT || wait_check == SELECT_WRONG_DESC) {
+	if (wait_check == ERROR_SELECT) {
 		return INVALID_LINE_NUMBER_INPUT;
 	}
 	if (wait_check == SELECT_NO_REACTION) {
@@ -196,12 +195,14 @@ int read_line(int fildes, off_t offset, size_t length, char *buf) {
 		perror("Can't get/set position in file");
 		return ERROR_READ;
 	}
+
 	int read_check = read(fildes, buf, length);
 	if (read_check == ERROR_READ) {
 		perror("Can't read from file");
 		return ERROR_READ;
 	}
 	buf[length] = '\0';
+
 	return SUCCESS_READ;
 }
 
@@ -211,6 +212,7 @@ int print_file(int fildes) {
 		perror("Can't get/set file position");
 		return ERROR_PRINT_FILE;
 	}
+
 	char buf[BUFFER_SIZE + 1];
 	while (TRUE) {
 		int bytes_read = read(fildes, buf, BUFFER_SIZE);
@@ -245,21 +247,26 @@ int main(int argc, char** argv) {
 	if (table != NULL) {
 		while(TRUE) {	
 			int get_line_num_check = get_line_number(&line_num);
+
 			if (get_line_num_check == ERROR_GET_LINE_NUMBER) {
 				break;   
 			}
+
 			if (get_line_num_check == INVALID_LINE_NUMBER_INPUT) {
 				continue;
 			}
+
 			if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
 				printf("Printing out your file: \n");
 				print_file(fildes);
 				break;
 			}
+
 			if (line_num < 0 || line_num > table_length) {
 				fprintf(stderr, "Invalid line number. It has to be in range [0, %lld]\n", table_length);
 				continue;
 			}
+
 			if (line_num == STOP_INPUT) {
 				break;
 			}
