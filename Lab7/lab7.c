@@ -19,14 +19,19 @@
 #define ERROR_SELECT -1
 #define ERROR_STAT -1
 #define ERROR_MUNMAP -1
+
 #define SUCCESS_CLOSE_FILE 0
 #define SUCCESS_READ 0
 #define SUCCESS_WRITE 0
 #define SUCCESS_GET_LINE_NUMBER 1
 #define SUCCESS_PRINT_FILE 0
 #define SUCCESS_SELECT 1
+
 #define GET_LINE_NUMBER_TIMEOUT 2
 #define INVALID_LINE_NUMBER_INPUT 0
+#define SELECT_NO_REACTION 0
+#define SELECT_WRONG_DESC 2
+
 #define READ_EOF 0
 #define TABLE_INIT_SIZE 100
 #define INPUT_SIZE 128
@@ -36,8 +41,6 @@
 #define STOP_INPUT 0
 #define DECIMAL_SYSTEM 10
 #define MAX_DP 1
-#define SELECT_NO_REACTION 0
-#define SELECT_WRONG_DESC 2
 #define TIMEOUT_SEC 5
 #define TIMEOUT_USEC 0
 #define WITH_NEW_LINE 1
@@ -65,7 +68,6 @@ line_info *create_table(void *file_addr, off_t file_size, long long *table_lengt
 	char c;
 	ssize_t read_check;
 	size_t line_length = 0;
-
         off_t offset = 0, cur_offset = 0;
 
 	do {
@@ -171,27 +173,16 @@ int get_line_number(long long *line_num) {
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
    	input[bytes_read] = '\0';
-	if (input[bytes_read - 1] == '\n') {
-		input[bytes_read - 1] = '\0';
-		bytes_read--;
-	}
-	if (bytes_read == 0) {
-		return INVALID_LINE_NUMBER_INPUT;
-	}
 
-	char *ptr_first_char = input;
-        char *ptr_last_char = input + bytes_read - 1;
 	char *endptr = input;
-
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
-	if (ptr_first_char <= endptr && endptr <= ptr_last_char) {
+	if (*endptr != '\n' && *endptr != '\0') {
 		int write_check = write_to_file(STDOUT_FILENO, "Number contains invalid symbols\n", 32, WITHOUT_NEW_LINE); 
 		if (write_check == ERROR_WRITE) {
 			return ERROR_GET_LINE_NUMBER;
 		}
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
-
 	return SUCCESS_GET_LINE_NUMBER;
 }
 
@@ -221,12 +212,10 @@ int main(int argc, char** argv) {
 		return 0;
 	}
 
-	long long table_length = 0;
+	long long table_length = 0, line_num = 0;
 	line_info *table = create_table(file_addr, file_size, &table_length);
-	
 	if (table != NULL) {
 		while(TRUE) {	
-			long long line_num;
 	        	int get_line_num_check = get_line_number(&line_num);
 			if (get_line_num_check == ERROR_GET_LINE_NUMBER) {
 				break;   
