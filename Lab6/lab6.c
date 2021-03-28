@@ -37,7 +37,7 @@
 #define FALSE 0
 #define STOP_INPUT 0
 #define DECIMAL_SYSTEM 10
-#define SELECT_MAX_FILDES 1
+#define SELECT_MAX_FILDES_PLUS_1 1
 #define TIMEOUT_SEC 5
 #define TIMEOUT_USEC 0
 
@@ -145,7 +145,7 @@ int wait_for_input() {
 	timeout.tv_sec = TIMEOUT_SEC;
 	timeout.tv_usec = TIMEOUT_USEC;
 
-	int select_check = select(SELECT_MAX_FILDES, &read_descriptors, NULL, NULL, &timeout);
+	int select_check = select(SELECT_MAX_FILDES_PLUS_1, &read_descriptors, NULL, NULL, &timeout);
 
     	if (select_check == ERROR_SELECT) {
         	perror("Select error");
@@ -288,19 +288,20 @@ int main(int argc, char** argv) {
 				break;
 			}
 
-			off_t offset = table[line_num - 1].offset;
-			size_t length = table[line_num - 1].length;
-			char buf[length + 1];
+			off_t line_offset = table[line_num - 1].offset;
+			size_t line_length = table[line_num - 1].length;
+			char line[line_length + 1];
 
-			int read_check = read_line(fildes, offset, length, buf);
+			int read_check = read_line(fildes, line_offset, line_length, line);
 			if (read_check == ERROR_READ) {
 				break;
 			}
-			printf("%s\n", buf);
+			printf("%s\n", line);
 		}
+
+		free(table);
 	}
 
-	free(table);
 	int close_check = close(fildes); 
 	if (close_check == ERROR_CLOSE_FILE) {
 		perror("Can't close file");
