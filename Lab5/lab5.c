@@ -119,7 +119,7 @@ line_info *create_table(int fildes, long long *table_length) {
 int write_to_console(const void *buf, size_t nbytes, int new_line) {
 	int write_check = write(STDOUT_FILENO, buf, nbytes);
 	if (write_check == ERROR_WRITE) {
-		perror("Can't write to file");
+		perror("Can't write to console");
 		return ERROR_WRITE;
 	}
 	if (new_line == WITH_NEW_LINE) {
@@ -208,13 +208,17 @@ int main(int argc, char** argv) {
 
 			off_t line_offset = table[line_num - 1].offset;
 			size_t line_length = table[line_num - 1].length;
-			char line[line_length + 1];
+			char line[line_length];
 
 			int read_check = read_line(fildes, line_offset, line_length, line);
 			if (read_check == ERROR_READ) {
 				break;
 			}
-			write_to_console(line, line_length, WITH_NEW_LINE);
+
+			int write_check = write_to_console(line, line_length, WITH_NEW_LINE);
+			if (write_check == ERROR_WRITE) {
+				break;
+			}
 		}
 
 		free(table);
