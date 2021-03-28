@@ -19,7 +19,7 @@
 #define ERROR_SELECT -1
 #define ERROR_FSTAT -1
 #define ERROR_MUNMAP -1
-#define ERROR_PRINTF 0
+#define ERROR_PRINTF_LESS_OR_EQ -1
 
 #define SUCCESS_CLOSE_FILE 0
 #define SUCCESS_READ 0
@@ -119,11 +119,17 @@ line_info *create_table(void *file_addr, off_t file_size, long long *table_lengt
 
 int write_to_console(const char *buf, int length, int new_line) {
 	int printf_check = printf("%.*s", length, buf);
-	if (printf_check < ERROR_PRINTF) {
+	if (printf_check <= ERROR_PRINTF_LESS_OR_EQ) {
 		perror("Can't write to console");
 		return ERROR_WRITE;
 	}
-	fflush(stdout);
+
+	int fflush_check = fflush(stdout);
+	if (fflush_check == EOF) {
+		perror("fflush error");
+		return ERROR_WRITE;
+	}
+
 	if (new_line == WITH_NEW_LINE) {
 		return write_to_console("\n", 1, WITHOUT_NEW_LINE);
 	}
@@ -266,7 +272,7 @@ int main(int argc, char** argv) {
 			off_t line_offset = table[line_num - 1].offset;
 			size_t line_length = table[line_num - 1].length;
 			
-			int write_check = write_to_console((char *) (file_addr + line_offset), line_length, WITH_NEW_LINE);
+			int write_check = write_to_console(file_addr + line_offset, line_length, WITH_NEW_LINE);
 			if (write_check == ERROR_WRITE) {
 				break;
 			}
