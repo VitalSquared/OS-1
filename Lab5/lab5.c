@@ -1,9 +1,9 @@
 #include <sys/types.h>
-#include <fcntl.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
 #define ERROR_OPEN_FILE -1
 #define ERROR_CLOSE_FILE -1
