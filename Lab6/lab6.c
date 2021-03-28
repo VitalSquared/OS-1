@@ -240,12 +240,18 @@ int print_file(int fildes) {
 		if (bytes_read == READ_EOF) {
 			break;
 		}
+
 		int write_check = write_to_file(STDOUT_FILENO, buf, bytes_read);
 		if (write_check == ERROR_WRITE) {
 			return ERROR_PRINT_FILE;
 		}
 	}
-	printf("\n");
+
+	int write_check = write_to_file(STDOUT_FILENO, "\n", 1);
+	if (write_check == ERROR_WRITE) {
+		return ERROR_PRINT_FILE;
+	}
+	
 	return SUCCESS_PRINT_FILE;
 }
 
