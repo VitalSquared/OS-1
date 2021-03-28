@@ -129,8 +129,8 @@ line_info *create_table(int fildes, long long *table_length) {
 	return table;
 }
 
-int write_to_console(const void *buf, size_t nbytes, int new_line) {
-	int write_check = write(STDOUT_FILENO, buf, nbytes);
+int write_to_console(const char *buf, size_t length, int new_line) {
+	int write_check = write(STDOUT_FILENO, buf, length);
 	if (write_check == ERROR_WRITE) {
 		perror("Can't write to console");
 		return ERROR_WRITE;
@@ -224,33 +224,28 @@ int read_line(int fildes, off_t offset, size_t length, char *buf) {
 	return SUCCESS_READ;
 }
 
-int print_file(int fildes) {
+int print_file(int fildes, line_info *table, long long table_length) {
 	off_t lseek_check = lseek(fildes, 0L, SEEK_SET);
 	if (lseek_check == ERROR_LSEEK) {
 		perror("Can't get/set file position");
 		return ERROR_PRINT_FILE;
 	}
 
-	char buf[BUFFER_SIZE];
-	while (TRUE) {
-		int bytes_read = read(fildes, buf, BUFFER_SIZE);
-		if (bytes_read == ERROR_READ) {
-			perror("Can't read from file");
+	for (long long i = 0; i < table_length; i++) {
+		off_t line_offset = table[i].offset;
+		size_t line_length = table[i].length;
+		char line[line_length];
+
+		int read_check = read_line(fildes, line_offset, line_length, line);
+		if (read_check == ERROR_READ) {
+			perror("Can' read from file");
 			return ERROR_PRINT_FILE;
 		}
-		if (bytes_read == READ_EOF) {
-			break;
-		}
 
-		int write_check = write_to_console(buf, bytes_read, WITHOUT_NEW_LINE);
+		int write_check = write_to_console(line, line_length, WITH_NEW_LINE);
 		if (write_check == ERROR_WRITE) {
 			return ERROR_PRINT_FILE;
 		}
-	}
-	
-	int write_check = write_to_console("\n", 1, WITHOUT_NEW_LINE);
-	if (write_check == ERROR_WRITE) {
-		return ERROR_PRINT_FILE;
 	}
 	
 	return SUCCESS_PRINT_FILE;
@@ -283,7 +278,7 @@ int main(int argc, char** argv) {
 			}
 
 			if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
-				print_file(fildes);
+				print_file(fildes, table, table_length);
 				break;
 			}
 
