@@ -36,6 +36,8 @@
 #define TRUE 1
 #define FALSE 0
 #define STOP_INPUT 0
+#define WITH_NEW_LINE 1
+#define WITHOUT_NEW_LINE 0
 #define DECIMAL_SYSTEM 10
 #define SELECT_MAX_FILDES_PLUS_1 1
 #define TIMEOUT_SEC 5
@@ -127,11 +129,14 @@ line_info *create_table(int fildes, long long *table_length) {
 	return table;
 }
 
-int write_to_file(int fildes, const void *buf, size_t nbytes) {
-	int write_check = write(fildes, buf, nbytes);
+int write_to_console(const void *buf, size_t nbytes, int new_line) {
+	int write_check = write(STDOUT_FILENO, buf, nbytes);
 	if (write_check == ERROR_WRITE) {
-		perror("Can't write to file");
+		perror("Can't write to console");
 		return ERROR_WRITE;
+	}
+	if (new_line == WITH_NEW_LINE) {
+		return write_to_console("\n", 1, WITHOUT_NEW_LINE);
 	}
 	return SUCCESS_WRITE;
 }
@@ -153,7 +158,7 @@ int wait_for_input() {
     	}
 
     	if (select_check == SELECT_NO_REACTION) {
-		int write_check = write_to_file(STDOUT_FILENO, "Time is out!\n", 13);
+		int write_check = write_to_console("Time is out!\n", 13, WITHOUT_NEW_LINE);
 		if (write_check == ERROR_WRITE) {
 			return ERROR_SELECT;
 		}
@@ -170,7 +175,7 @@ int wait_for_input() {
 int get_line_number(long long *line_num) {
 	char input[INPUT_SIZE + 1]; 
 	
-	int write_check = write_to_file(STDOUT_FILENO, "Five seconds to enter line number: ", 35); 
+	int write_check = write_to_console("Five seconds to enter line number: ", 35, WITHOUT_NEW_LINE); 
 	if (write_check == ERROR_WRITE) {
 		return ERROR_GET_LINE_NUMBER;
 	}
@@ -196,10 +201,7 @@ int get_line_number(long long *line_num) {
 	char *endptr = input;
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
 	if (*endptr != '\n' && *endptr != '\0') {
-		int write_check = write_to_file(STDOUT_FILENO, "Number contains invalid symbols\n", 32); 
-		if (write_check == ERROR_WRITE) {
-			return ERROR_GET_LINE_NUMBER;
-		}
+		fprintf(stderr, "Number contains invalid symbols\n");
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
 
@@ -218,7 +220,6 @@ int read_line(int fildes, off_t offset, size_t length, char *buf) {
 		perror("Can't read from file");
 		return ERROR_READ;
 	}
-	buf[bytes_read] = '\0';
 
 	return SUCCESS_READ;
 }
@@ -241,12 +242,16 @@ int print_file(int fildes) {
 			break;
 		}
 
-		int write_check = write_to_file(STDOUT_FILENO, buf, bytes_read);
+		int write_check = write_to_console(buf, bytes_read, WITHOUT_NEW_LINE);
 		if (write_check == ERROR_WRITE) {
 			return ERROR_PRINT_FILE;
 		}
 	}
-	printf("\n");
+	
+	int write_check = write_to_console("\n", 1, WITHOUT_NEW_LINE);
+	if (write_check == ERROR_WRITE) {
+		return ERROR_PRINT_FILE;
+	}
 	
 	return SUCCESS_PRINT_FILE;
 }
@@ -278,7 +283,6 @@ int main(int argc, char** argv) {
 			}
 
 			if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
-				printf("Printing out your file: \n");
 				print_file(fildes);
 				break;
 			}
@@ -294,13 +298,17 @@ int main(int argc, char** argv) {
 
 			off_t line_offset = table[line_num - 1].offset;
 			size_t line_length = table[line_num - 1].length;
-			char line[line_length + 1];
+			char line[line_length];
 
 			int read_check = read_line(fildes, line_offset, line_length, line);
 			if (read_check == ERROR_READ) {
 				break;
 			}
-			printf("%s\n", line);
+			
+			int write_check = write_to_console(line, line_length, WITH_NEW_LINE);
+			if (write_check == ERROR_WRITE) {
+				break;
+			}
 		}
 
 		free(table);
