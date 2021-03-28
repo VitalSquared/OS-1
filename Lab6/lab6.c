@@ -230,7 +230,7 @@ int print_file(int fildes) {
 		return ERROR_PRINT_FILE;
 	}
 
-	char buf[BUFFER_SIZE + 1];
+	char buf[BUFFER_SIZE];
 	while (TRUE) {
 		int bytes_read = read(fildes, buf, BUFFER_SIZE);
 		if (bytes_read == ERROR_READ) {
@@ -240,8 +240,10 @@ int print_file(int fildes) {
 		if (bytes_read == READ_EOF) {
 			break;
 		}
-		buf[bytes_read] = '\0';
-		printf("%s", buf);
+		int write_check = write_to_file(STDOUT_FILENO, buf, bytes_read);
+		if (write_check == ERROR_WRITE) {
+			return ERROR_PRINT_FILE;
+		}
 	}
 	printf("\n");
 	return SUCCESS_PRINT_FILE;
