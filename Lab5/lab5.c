@@ -215,9 +215,10 @@ int main(int argc, char** argv) {
 			}
 			printf("%s\n", line);
 		}
+
+		free(table);
 	}
 
-	free(table);
 	int close_check = close(fildes); 
 	if (close_check == ERROR_CLOSE_FILE) {
 		perror("Can't close file");
