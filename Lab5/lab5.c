@@ -3,6 +3,10 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
+
+extern int errno;
 
 #define ERROR_OPEN_FILE -1
 #define ERROR_CLOSE_FILE -1
@@ -18,7 +22,9 @@
 #define SUCCESS_WRITE 0
 #define SUCCESS_GET_LINE_NUMBER 1
 #define SUCCESS_ADD_TO_TABLE 0
+#define NO_ERROR 0
 
+#define STRING_EQUAL 0
 #define INVALID_LINE_NUMBER_INPUT 0
 #define READ_EOF 0
 #define TABLE_INIT_SIZE 100
@@ -148,10 +154,20 @@ int get_line_number(long long *line_num) {
 
 	char *endptr = input;
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
-	if (*endptr != '\n' && *endptr != '\0') {
-		fprintf(stderr, "Number contains invalid symbols\n");
+
+	if (errno != NO_ERROR) {
+		perror("Can't convert given number");
+		errno = 0;
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
+
+	int compare1_result = strcmp(endptr, "\n");
+	int compare2_result = strcmp(endptr, "");
+	if (compare1_result != STRING_EQUAL && compare2_result != STRING_EQUAL) {
+		fprintf(stderr, "Number contains invalid symbols\n");
+		return INVALID_LINE_NUMBER_INPUT;
+	}
+
 	return SUCCESS_GET_LINE_NUMBER;
 }
 
