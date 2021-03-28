@@ -225,12 +225,6 @@ int read_line(int fildes, off_t offset, size_t length, char *buf) {
 }
 
 int print_file(int fildes, line_info *table, long long table_length) {
-	off_t lseek_check = lseek(fildes, 0L, SEEK_SET);
-	if (lseek_check == ERROR_LSEEK) {
-		perror("Can't get/set file position");
-		return ERROR_PRINT_FILE;
-	}
-
 	for (long long i = 0; i < table_length; i++) {
 		off_t line_offset = table[i].offset;
 		size_t line_length = table[i].length;
