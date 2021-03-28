@@ -116,8 +116,8 @@ line_info *create_table(int fildes, long long *table_length) {
 	return table;
 }
 
-int write_to_console(const void *buf, size_t nbytes, int new_line) {
-	int write_check = write(STDOUT_FILENO, buf, nbytes);
+int write_to_console(const char *buf, size_t length, int new_line) {
+	int write_check = write(STDOUT_FILENO, buf, length);
 	if (write_check == ERROR_WRITE) {
 		perror("Can't write to console");
 		return ERROR_WRITE;
