@@ -19,6 +19,7 @@
 #define ERROR_SELECT -1
 #define ERROR_FSTAT -1
 #define ERROR_MUNMAP -1
+#define ERROR_PRINTF 0
 
 #define SUCCESS_CLOSE_FILE 0
 #define SUCCESS_READ 0
@@ -116,14 +117,15 @@ line_info *create_table(void *file_addr, off_t file_size, long long *table_lengt
 	return table;
 }
 
-int write_to_file(int fildes, const void *buf, size_t nbytes, int new_line) {
-	int write_check = write(fildes, buf, nbytes);
-	if (write_check == ERROR_WRITE) {
-		perror("Can't write to file");
+int write_to_console(const char *buf, int length, int new_line) {
+	int printf_check = printf("%.*s", length, buf);
+	if (printf_check < ERROR_PRINTF) {
+		perror("Can't write to console");
 		return ERROR_WRITE;
 	}
+	fflush(stdout);
 	if (new_line == WITH_NEW_LINE) {
-		return write_to_file(fildes, "\n", 1, WITHOUT_NEW_LINE);
+		return write_to_console("\n", 1, WITHOUT_NEW_LINE);
 	}
 	return SUCCESS_WRITE;
 }
@@ -145,7 +147,7 @@ int wait_for_input() {
     	}
 
     	if (select_check == SELECT_NO_REACTION) {
-		int write_check = write_to_file(STDOUT_FILENO, "Time is out!\n", 13, WITHOUT_NEW_LINE);
+		int write_check = write_to_console("Time is out!\n", 13, WITHOUT_NEW_LINE);
 		if (write_check == ERROR_WRITE) {
 			return ERROR_SELECT;
 		}
@@ -162,7 +164,7 @@ int wait_for_input() {
 int get_line_number(long long *line_num) {
 	char input[INPUT_SIZE + 1]; 
 	
-	int write_check = write_to_file(STDOUT_FILENO, "Five seconds to enter line number: ", 35, WITHOUT_NEW_LINE); 
+	int write_check = write_to_console("Five seconds to enter line number: ", 35, WITHOUT_NEW_LINE); 
 	if (write_check == ERROR_WRITE) {
 		return ERROR_GET_LINE_NUMBER;
 	}
@@ -188,20 +190,21 @@ int get_line_number(long long *line_num) {
 	char *endptr = input;
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
 	if (*endptr != '\n' && *endptr != '\0') {
-		int write_check = write_to_file(STDOUT_FILENO, "Number contains invalid symbols\n", 32, WITHOUT_NEW_LINE); 
-		if (write_check == ERROR_WRITE) {
-			return ERROR_GET_LINE_NUMBER;
-		}
+		fprintf(stderr, "Number contains invalid symbols\n");
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
 	return SUCCESS_GET_LINE_NUMBER;
 }
 
-int print_file(void *file_addr, off_t file_size) {
-	int write_check = write_to_file(STDOUT_FILENO, file_addr, file_size, WITH_NEW_LINE);
-	if (write_check == ERROR_WRITE) {
-		perror("Can't write to STDOUT");
-		return ERROR_PRINT_FILE;
+int print_file(void *file_addr, line_info *table, long long table_length) {
+	for (long long i = 0; i < table_length; i++) {
+		off_t line_offset = table[i].offset;
+		size_t line_length = table[i].length;
+
+		int write_check = write_to_console(file_addr + line_offset, line_length, WITH_NEW_LINE);
+		if (write_check == ERROR_WRITE) {
+			return ERROR_PRINT_FILE;
+		}
 	}
 	return SUCCESS_PRINT_FILE;
 }
@@ -247,8 +250,7 @@ int main(int argc, char** argv) {
 			}
 
 			if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
-				printf("Printing out your file: \n");
-				print_file(file_addr, file_size);
+				print_file(file_addr, table, table_length);
 				break;
 			}
 
@@ -264,7 +266,7 @@ int main(int argc, char** argv) {
 			off_t line_offset = table[line_num - 1].offset;
 			size_t line_length = table[line_num - 1].length;
 			
-			int write_check = write_to_file(STDOUT_FILENO, file_addr + line_offset, line_length, WITH_NEW_LINE);
+			int write_check = write_to_console((char *) (file_addr + line_offset), line_length, WITH_NEW_LINE);
 			if (write_check == ERROR_WRITE) {
 				break;
 			}
