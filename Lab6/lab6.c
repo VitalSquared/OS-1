@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
 #define ERROR_OPEN_FILE -1
 #define ERROR_CLOSE_FILE -1
