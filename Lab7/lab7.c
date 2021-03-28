@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 
 #define ERROR_OPEN_FILE -1
 #define ERROR_CLOSE_FILE -1
@@ -15,6 +14,7 @@
 #define ERROR_ADD_TO_TABLE -1
 #define ERROR_GET_LINE_NUMBER -1
 #define ERROR_LSEEK -1
+#define ERROR_ADD_TO_TABLE -1
 #define ERROR_PRINT_FILE -1
 #define ERROR_SELECT -1
 #define ERROR_FSTAT -1
@@ -24,6 +24,7 @@
 #define SUCCESS_READ 0
 #define SUCCESS_WRITE 0
 #define SUCCESS_GET_LINE_NUMBER 1
+#define SUCCESS_ADD_TO_TABLE 0
 #define SUCCESS_PRINT_FILE 0
 #define SUCCESS_SELECT 1
 
@@ -39,7 +40,7 @@
 #define FALSE 0
 #define STOP_INPUT 0
 #define DECIMAL_SYSTEM 10
-#define SELECT_MAX_FILDES 1
+#define SELECT_MAX_FILDES_PLUS_1 1
 #define TIMEOUT_SEC 5
 #define TIMEOUT_USEC 0
 #define WITH_NEW_LINE 1
@@ -50,13 +51,42 @@ typedef struct line_info {
 	size_t length;
 } line_info;
 
+int add_to_table(line_info **table, long long *table_size, long long *table_length, off_t line_offset, size_t line_length) {
+	if (table == NULL || *table == NULL || table_size == NULL || table_length == NULL) {
+		fprintf(stderr, "Can't add element to table: Invalid argument(s)");
+		return ERROR_ADD_TO_TABLE;
+	}
+
+	if (*table_length == *table_size) {
+		line_info *ptr = (line_info *)realloc(*table, 2 * (*table_size) * sizeof(line_info));
+		if (ptr == NULL) {
+			perror("Can't create table");
+			return ERROR_ADD_TO_TABLE;
+		}
+		*table = ptr;
+		(*table_size) *= 2;
+	}
+
+	line_info elem;
+	elem.offset = line_offset;
+	elem.length = line_length;
+
+	(*table)[*table_length] = elem;
+	(*table_length)++;
+
+	return SUCCESS_ADD_TO_TABLE;
+}
+
 line_info *create_table(void *file_addr, off_t file_size, long long *table_length) {
 	if (table_length == NULL) {
 		fprintf(stderr, "Can't create table: Invalid argument(s)\n");
 		return NULL;
 	}
 	
-	size_t size = TABLE_INIT_SIZE;
+	long long size = TABLE_INIT_SIZE;
+	size_t line_length = 0;
+	off_t line_offset = 0, file_offset = 0;
+
 	*table_length = 0;
 	line_info *table = (line_info *) malloc(size * sizeof(line_info));
 	if (table == NULL) {
@@ -64,40 +94,24 @@ line_info *create_table(void *file_addr, off_t file_size, long long *table_lengt
 		return NULL;
 	}
 
-	char c;
-	ssize_t read_check;
-	size_t line_length = 0;
-        off_t offset = 0, cur_offset = 0;
-
-	do {
-		c = *((char*) (file_addr + cur_offset));
-		if (cur_offset == file_size || c == '\n') {
-			if (*table_length == size) {
-				line_info *ptr = (line_info *)realloc(table, 2 * size * sizeof(line_info));
-				if (ptr == NULL) {
-					free(table);
-					perror("Can't create table");
-					return NULL;
-				}
-				table = ptr;
-				size *= 2;
-			}
-
-			line_info elem;
-			elem.offset = offset;
-			elem.length = line_length;
-
-			table[*table_length] = elem;
-			(*table_length)++;
-
-			line_length = 0;
-			cur_offset++;
-			offset = cur_offset;
+	while (file_offset <= file_size) {
+		char c = *((char*) (file_addr + file_offset));
+		if (file_offset != file_size && c != '\n') {
+			line_length++;
+			file_offset++;
 			continue;
-		} 
-		cur_offset++;
-		line_length++;
-	} while (cur_offset != file_size + 1);
+		}
+	
+		int add_check = add_to_table(&table, &size, table_length, line_offset, line_length);
+		if (add_check == ERROR_ADD_TO_TABLE) {
+			free(table);
+			return NULL;
+		}	
+
+		line_length = 0;
+		file_offset++;
+		line_offset = file_offset;
+	} 
 
 	return table;
 }
@@ -116,23 +130,21 @@ int write_to_file(int fildes, const void *buf, size_t nbytes, int new_line) {
 
 int wait_for_input() {
    	fd_set read_descriptors;
-        struct timeval timeout;
-	int result;
-
 	FD_ZERO(&read_descriptors);
 	FD_SET(STDIN_FILENO, &read_descriptors);
 	
+	struct timeval timeout;
 	timeout.tv_sec = TIMEOUT_SEC;
 	timeout.tv_usec = TIMEOUT_USEC;
 
-	result = select(SELECT_MAX_FILDES, &read_descriptors, NULL, NULL, &timeout);
+	int select_check = select(SELECT_MAX_FILDES_PLUS_1, &read_descriptors, NULL, NULL, &timeout);
 
-    	if (result == ERROR_SELECT) {
+    	if (select_check == ERROR_SELECT) {
         	perror("Select error");
         	return ERROR_SELECT;
     	}
 
-    	if (result == SELECT_NO_REACTION) {
+    	if (select_check == SELECT_NO_REACTION) {
 		int write_check = write_to_file(STDOUT_FILENO, "Time is out!\n", 13, WITHOUT_NEW_LINE);
 		if (write_check == ERROR_WRITE) {
 			return ERROR_SELECT;
@@ -185,6 +197,15 @@ int get_line_number(long long *line_num) {
 	return SUCCESS_GET_LINE_NUMBER;
 }
 
+int print_file(void *file_addr, off_t file_size) {
+	int write_check = write_to_file(STDOUT_FILENO, file_addr, file_size, WITH_NEW_LINE);
+	if (write_check == ERROR_WRITE) {
+		perror("Can't write to STDOUT");
+		return ERROR_PRINT_FILE;
+	}
+	return SUCCESS_PRINT_FILE;
+}
+
 int main(int argc, char** argv) {
 	if (argc < 2) {
 		printf("Usage: %s <filename>\n", argv[0]);
@@ -227,10 +248,7 @@ int main(int argc, char** argv) {
 
 			if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
 				printf("Printing out your file: \n");
-				int write_check = write_to_file(STDOUT_FILENO, file_addr, file_size, WITH_NEW_LINE);
-				if (write_check == ERROR_WRITE) {
-					perror("Can't write to STDOUT");
-				}
+				print_file(file_addr, file_size);
 				break;
 			}
 
