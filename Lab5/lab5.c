@@ -34,30 +34,29 @@ typedef struct line_info {
 	size_t length;
 } line_info;
 
-int add_to_table(line_info **table, long long *table_size, long long *table_length, off_t offset, size_t length) {
+int add_to_table(line_info **table, long long *table_size, long long *table_length, off_t line_offset, size_t line_length) {
 	if (table == NULL || *table == NULL || table_size == NULL || table_length == NULL) {
 		fprintf(stderr, "Can't add element to table: Invalid argument(s)");
 		return ERROR_ADD_TO_TABLE;
 	}
 
-	long long size = *table_size;
-	if (*table_length == size) {
-		line_info *ptr = (line_info *)realloc(*table, 2 * size * sizeof(line_info));
+	if (*table_length == *table_size) {
+		line_info *ptr = (line_info *)realloc(*table, 2 * (*table_size) * sizeof(line_info));
 		if (ptr == NULL) {
 			perror("Can't create table");
 			return ERROR_ADD_TO_TABLE;
 		}
 		*table = ptr;
-		size *= 2;
-		*table_size = size;
+		(*table_size) *= 2;
 	}
 
 	line_info elem;
-	elem.offset = offset;
-	elem.length = length;
+	elem.offset = line_offset;
+	elem.length = line_length;
 
 	(*table)[*table_length] = elem;
 	(*table_length)++;
+
 	return SUCCESS_ADD_TO_TABLE;
 }
 
@@ -69,7 +68,7 @@ line_info *create_table(int fildes, long long *table_length) {
 	
 	long long size = TABLE_INIT_SIZE;
 	size_t line_length = 0;
-	off_t offset = 0;
+	off_t line_offset = 0;
 	ssize_t read_check = READ_INIT;
 	char c;
 
@@ -80,8 +79,8 @@ line_info *create_table(int fildes, long long *table_length) {
 		return NULL;
 	}
 
-        offset = lseek(fildes, 0L, SEEK_SET);
-	if (offset == ERROR_LSEEK) {
+        line_offset = lseek(fildes, 0L, SEEK_SET);
+	if (line_offset == ERROR_LSEEK) {
 		perror("Can't get/set position in file");
 		free(table);
 		return NULL;
@@ -94,23 +93,24 @@ line_info *create_table(int fildes, long long *table_length) {
 			free(table);
 			return NULL;
 		}
-		if (read_check == READ_EOF || c == '\n') {
-			int add_check = add_to_table(&table, &size, table_length, offset, line_length);
-			if (add_check == ERROR_ADD_TO_TABLE) {
-				free(table);
-				return NULL;
-			}
-
-			line_length = 0;
-			offset = lseek(fildes, 0L, SEEK_CUR);
-			if (offset == ERROR_LSEEK) {
-				perror("Can't get/set position in file");
-				free(table);
-				return NULL;
-			}
+		if (read_check != READ_EOF && c != '\n') {
+			line_length++;
 			continue;
-		} 
-		line_length++;
+		}
+
+		int add_check = add_to_table(&table, &size, table_length, line_offset, line_length);
+		if (add_check == ERROR_ADD_TO_TABLE) {
+			free(table);
+			return NULL;
+		}
+
+		line_length = 0;
+		line_offset = lseek(fildes, 0L, SEEK_CUR);
+		if (line_offset == ERROR_LSEEK) {
+			perror("Can't get/set position in file");
+			free(table);
+			return NULL;
+		}
 	}
 	return table;
 }
@@ -206,15 +206,15 @@ int main(int argc, char** argv) {
 				break;
 			}
 
-			off_t offset = table[line_num - 1].offset;
-			size_t length = table[line_num - 1].length;
-			char buf[length + 1];
+			off_t line_offset = table[line_num - 1].offset;
+			size_t line_length = table[line_num - 1].length;
+			char line[line_length + 1];
 
-			int read_check = read_line(fildes, offset, length, buf);
+			int read_check = read_line(fildes, line_offset, line_length, line);
 			if (read_check == ERROR_READ) {
 				break;
 			}
-			printf("%s\n", buf);
+			printf("%s\n", line);
 		}
 	}
 
