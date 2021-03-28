@@ -27,6 +27,8 @@
 #define TRUE 1
 #define STOP_INPUT 0
 #define DECIMAL_SYSTEM 10
+#define WITH_NEW_LINE 1
+#define WITHOUT_NEW_LINE 0
 
 typedef struct line_info {
 	off_t offset;
@@ -114,11 +116,14 @@ line_info *create_table(int fildes, long long *table_length) {
 	return table;
 }
 
-int write_to_file(int fildes, const void *buf, size_t nbytes) {
-	int write_check = write(fildes, buf, nbytes);
+int write_to_console(const void *buf, size_t nbytes, int new_line) {
+	int write_check = write(STDOUT_FILENO, buf, nbytes);
 	if (write_check == ERROR_WRITE) {
 		perror("Can't write to file");
 		return ERROR_WRITE;
+	}
+	if (new_line == WITH_NEW_LINE) {
+		return write_to_console("\n", 1, WITHOUT_NEW_LINE);
 	}
 	return SUCCESS_WRITE;
 }
@@ -126,7 +131,7 @@ int write_to_file(int fildes, const void *buf, size_t nbytes) {
 int get_line_number(long long *line_num) {
 	char input[INPUT_SIZE + 1]; 
 	
-	int write_check = write_to_file(STDOUT_FILENO, "Enter line number: ", 19); 
+	int write_check = write_to_console("Enter line number: ", 19, WITHOUT_NEW_LINE); 
 	if (write_check == ERROR_WRITE) {
 		return ERROR_GET_LINE_NUMBER;
 	} 
@@ -144,10 +149,7 @@ int get_line_number(long long *line_num) {
 	char *endptr = input;
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
 	if (*endptr != '\n' && *endptr != '\0') {
-		int write_check = write_to_file(STDOUT_FILENO, "Number contains invalid symbols\n", 32); 
-		if (write_check == ERROR_WRITE) {
-			return ERROR_GET_LINE_NUMBER;
-		}
+		fprintf(stderr, "Number contains invalid symbols\n");
 		return INVALID_LINE_NUMBER_INPUT;
 	}	
 	return SUCCESS_GET_LINE_NUMBER;
@@ -165,7 +167,6 @@ int read_line(int fildes, off_t offset, size_t length, char *buf) {
 		perror("Can't read from file");
 		return ERROR_READ;
 	}
-	buf[length] = '\0';
 
 	return SUCCESS_READ;
 }
@@ -213,7 +214,7 @@ int main(int argc, char** argv) {
 			if (read_check == ERROR_READ) {
 				break;
 			}
-			printf("%s\n", line);
+			write_to_console(line, line_length, WITH_NEW_LINE);
 		}
 
 		free(table);
