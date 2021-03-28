@@ -213,12 +213,12 @@ int read_line(int fildes, off_t offset, size_t length, char *buf) {
 		return ERROR_READ;
 	}
 
-	int read_check = read(fildes, buf, length);
-	if (read_check == ERROR_READ) {
+	int bytes_read = read(fildes, buf, length);
+	if (bytes_read == ERROR_READ) {
 		perror("Can't read from file");
 		return ERROR_READ;
 	}
-	buf[length] = '\0';
+	buf[bytes_read] = '\0';
 
 	return SUCCESS_READ;
 }
@@ -246,11 +246,7 @@ int print_file(int fildes) {
 			return ERROR_PRINT_FILE;
 		}
 	}
-
-	int write_check = write_to_file(STDOUT_FILENO, "\n", 1);
-	if (write_check == ERROR_WRITE) {
-		return ERROR_PRINT_FILE;
-	}
+	printf("\n");
 	
 	return SUCCESS_PRINT_FILE;
 }
