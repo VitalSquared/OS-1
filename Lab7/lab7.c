@@ -95,8 +95,8 @@ line_info *create_table(void *file_addr, off_t file_size, long long *table_lengt
 	}
 
 	while (file_offset <= file_size) {
-		char c = *((char*) (file_addr + file_offset));
-		if (file_offset != file_size && c != '\n') {
+		char *c = (char*) (file_addr + file_offset);
+		if (file_offset < file_size && *c != '\n') {
 			line_length++;
 			file_offset++;
 			continue;
@@ -261,17 +261,17 @@ int main(int argc, char** argv) {
 				break;
 			}
 
-			off_t offset = table[line_num - 1].offset;
-			size_t length = table[line_num - 1].length;
+			off_t line_offset = table[line_num - 1].offset;
+			size_t line_length = table[line_num - 1].length;
 			
-			int write_check = write_to_file(STDOUT_FILENO, file_addr + offset, length, WITH_NEW_LINE);
+			int write_check = write_to_file(STDOUT_FILENO, file_addr + line_offset, line_length, WITH_NEW_LINE);
 			if (write_check == ERROR_WRITE) {
 				break;
 			}
 		}
-	}
 
-	free(table);
+		free(table);
+	}
 
 	int munmap_check = munmap(file_addr, file_size);
     	if (munmap_check == ERROR_MUNMAP) {
