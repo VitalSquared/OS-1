@@ -31,6 +31,8 @@
 #define INVALID_LINE_NUMBER_INPUT 0
 #define SELECT_NO_REACTION 0
 
+#define NULL_WRITEFDS NULL
+#define NULL_ERRORFDS NULL
 #define STRING_EQUAL 0
 #define READ_EOF 0
 #define TABLE_INIT_SIZE 100
@@ -85,7 +87,7 @@ line_info *create_table(int fildes, long long *table_length) {
 	}
 	
 	long long size = TABLE_INIT_SIZE;
-	size_t line_length = 0;
+	size_t line_length = 0, read_length = 1;
 	off_t line_offset = 0;
 	ssize_t read_check = READ_INIT;
 	char c;
@@ -105,7 +107,7 @@ line_info *create_table(int fildes, long long *table_length) {
 	}
 
 	while (read_check != READ_EOF) {
-		read_check = read(fildes, &c, 1);
+		read_check = read(fildes, &c, read_length);
 		if (read_check == ERROR_READ) {
 			perror("Can't read from file");
 			free(table);
@@ -134,7 +136,7 @@ line_info *create_table(int fildes, long long *table_length) {
 }
 
 int write_to_console(const char *buf, size_t length, int new_line) {
-	int write_check = write(STDOUT_FILENO, buf, length);
+	ssize_t write_check = write(STDOUT_FILENO, buf, length);
 	if (write_check == ERROR_WRITE) {
 		perror("Can't write to console");
 		return ERROR_WRITE;
@@ -146,15 +148,15 @@ int write_to_console(const char *buf, size_t length, int new_line) {
 }
 
 int wait_for_input() {
-   	fd_set read_descriptors;
-	FD_ZERO(&read_descriptors);
-	FD_SET(STDIN_FILENO, &read_descriptors);
+   	fd_set readfds;
+	FD_ZERO(&readfds);
+	FD_SET(STDIN_FILENO, &readfds);
 	
 	struct timeval timeout;
 	timeout.tv_sec = TIMEOUT_SEC;
 	timeout.tv_usec = TIMEOUT_USEC;
 
-	int select_check = select(SELECT_MAX_FILDES_PLUS_1, &read_descriptors, NULL, NULL, &timeout);
+	int select_check = select(SELECT_MAX_FILDES_PLUS_1, &readfds, NULL_WRITEFDS, NULL_ERRORFDS, &timeout);
 
     	if (select_check == ERROR_SELECT) {
         	perror("Select error");
@@ -169,7 +171,7 @@ int wait_for_input() {
 		return SELECT_NO_REACTION;
     	}
 
-    	if (FD_ISSET(STDIN_FILENO, &read_descriptors) == FALSE) {
+    	if (FD_ISSET(STDIN_FILENO, &readfds) == FALSE) {
         	return SELECT_NO_REACTION;
     	}
 
@@ -229,7 +231,7 @@ int read_line(int fildes, off_t offset, size_t length, char *buf) {
 		return ERROR_READ;
 	}
 
-	int bytes_read = read(fildes, buf, length);
+	ssize_t bytes_read = read(fildes, buf, length);
 	if (bytes_read == ERROR_READ) {
 		perror("Can't read from file");
 		return ERROR_READ;
@@ -247,7 +249,7 @@ int print_file(int fildes) {
 
 	char buf[BUFFER_SIZE];
 	while (TRUE) {
-		int bytes_read = read(fildes, buf, BUFFER_SIZE);
+		ssize_t bytes_read = read(fildes, buf, BUFFER_SIZE);
 		if (bytes_read == ERROR_READ) {
 			perror("Can't read from file");
 			return ERROR_PRINT_FILE;
