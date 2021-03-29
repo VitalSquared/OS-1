@@ -178,7 +178,7 @@ int read_line(int fildes, off_t offset, size_t length, char *buf) {
 		return ERROR_READ;
 	}
 
-	int read_check = read(fildes, buf, length);
+	ssize_t read_check = read(fildes, buf, length);
 	if (read_check == ERROR_READ) {
 		perror("Can't read from file");
 		return ERROR_READ;
