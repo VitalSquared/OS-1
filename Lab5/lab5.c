@@ -74,10 +74,11 @@ line_info *create_table(int fildes, long long *table_length) {
 	}
 	
 	long long size = TABLE_INIT_SIZE;
-	size_t line_length = 0;
+	size_t line_length = 0, read_length = 1;
 	off_t line_offset = 0;
 	ssize_t read_check = READ_INIT;
 	char c;
+
 
 	*table_length = 0;
 	line_info *table = (line_info *) malloc(size * sizeof(line_info));
@@ -94,7 +95,7 @@ line_info *create_table(int fildes, long long *table_length) {
 	}
 
 	while (read_check != READ_EOF) {
-		read_check = read(fildes, &c, 1);
+		read_check = read(fildes, &c, read_length);
 		if (read_check == ERROR_READ) {
 			perror("Can't read from file");
 			free(table);
@@ -123,7 +124,7 @@ line_info *create_table(int fildes, long long *table_length) {
 }
 
 int write_to_console(const char *buf, size_t length, int new_line) {
-	int write_check = write(STDOUT_FILENO, buf, length);
+	ssize_t write_check = write(STDOUT_FILENO, buf, length);
 	if (write_check == ERROR_WRITE) {
 		perror("Can't write to console");
 		return ERROR_WRITE;
