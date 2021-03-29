@@ -36,6 +36,8 @@
 #define INVALID_LINE_NUMBER_INPUT 0
 #define SELECT_NO_REACTION 0
 
+#define NULL_WRITEFDS NULL
+#define NULL_ERRORFDS NULL
 #define STRING_EQUAL 0
 #define READ_EOF 0
 #define TABLE_INIT_SIZE 100
@@ -100,8 +102,12 @@ line_info *create_table(void *file_addr, off_t file_size, long long *table_lengt
 	}
 
 	while (file_offset <= file_size) {
-		char *c = (char*) (file_addr + file_offset);
-		if (file_offset < file_size && *c != '\n') {
+		char *c = NULL;
+		if (file_offset < file_size) {
+			c = (char *) (file_addr + file_offset);
+		}
+		
+		if (file_offset < file_size && (c != NULL && *c != '\n')) {
 			line_length++;
 			file_offset++;
 			continue;
@@ -141,15 +147,15 @@ int write_to_console(const char *buf, int length, int new_line) {
 }
 
 int wait_for_input() {
-   	fd_set read_descriptors;
-	FD_ZERO(&read_descriptors);
-	FD_SET(STDIN_FILENO, &read_descriptors);
+   	fd_set readfds;
+	FD_ZERO(&readfds);
+	FD_SET(STDIN_FILENO, &readfds);
 	
 	struct timeval timeout;
 	timeout.tv_sec = TIMEOUT_SEC;
 	timeout.tv_usec = TIMEOUT_USEC;
 
-	int select_check = select(SELECT_MAX_FILDES_PLUS_1, &read_descriptors, NULL, NULL, &timeout);
+	int select_check = select(SELECT_MAX_FILDES_PLUS_1, &readfds, NULL_WRITEFDS, NULL_ERRORFDS, &timeout);
 
     	if (select_check == ERROR_SELECT) {
         	perror("Select error");
@@ -164,7 +170,7 @@ int wait_for_input() {
 		return SELECT_NO_REACTION;
     	}
 
-    	if (FD_ISSET(STDIN_FILENO, &read_descriptors) == FALSE) {
+    	if (FD_ISSET(STDIN_FILENO, &readfds) == FALSE) {
         	return SELECT_NO_REACTION;
     	}
 
@@ -216,16 +222,26 @@ int get_line_number(long long *line_num) {
 	return SUCCESS_GET_LINE_NUMBER;
 }
 
-int print_file(void *file_addr, line_info *table, long long table_length) {
-	for (long long i = 0; i < table_length; i++) {
-		off_t line_offset = table[i].offset;
-		size_t line_length = table[i].length;
+int print_file(void *file_addr, off_t file_size) {
+	off_t file_offset = 0;
+	while (file_offset < file_size) {
+		int write_size = BUFFER_SIZE;
+		if (file_size - file_offset < BUFFER_SIZE) {
+			write_size = file_size - file_offset;
+		}
 
-		int write_check = write_to_console(file_addr + line_offset, line_length, WITH_NEW_LINE);
+		int write_check = write_to_console(file_addr + file_offset, write_size, WITHOUT_NEW_LINE);
 		if (write_check == ERROR_WRITE) {
 			return ERROR_PRINT_FILE;
 		}
+		file_offset += write_size;
 	}
+	
+	int write_check = write_to_console("\n", 1, WITHOUT_NEW_LINE);
+	if (write_check == ERROR_WRITE) {
+		return ERROR_PRINT_FILE;
+	}
+
 	return SUCCESS_PRINT_FILE;
 }
 
@@ -270,7 +286,7 @@ int main(int argc, char** argv) {
 			}
 
 			if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
-				print_file(file_addr, table, table_length);
+				print_file(file_addr, file_size);
 				break;
 			}
 
