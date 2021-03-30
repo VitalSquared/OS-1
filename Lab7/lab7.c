@@ -9,6 +9,8 @@
 #include <string.h>
 #include <errno.h>
 
+extern int errno;
+
 #define ERROR_OPEN_FILE -1
 #define ERROR_CLOSE_FILE -1
 #define ERROR_READ -1
