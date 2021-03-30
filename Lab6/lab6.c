@@ -7,6 +7,8 @@
 #include <string.h>
 #include <errno.h>
 
+extern int errno;
+
 #define ERROR_OPEN_FILE -1
 #define ERROR_CLOSE_FILE -1
 #define ERROR_READ -1
@@ -212,7 +214,6 @@ int get_line_number(long long *line_num) {
 		errno = 0;
 		return INVALID_LINE_NUMBER_INPUT;
 	}
-
 
 	int compare1_result = strcmp(endptr, "\n");
 	int compare2_result = strcmp(endptr, "");
