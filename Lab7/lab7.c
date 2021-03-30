@@ -84,7 +84,7 @@ int add_to_table(line_info **table, long long *table_size, long long *table_leng
 	return SUCCESS_ADD_TO_TABLE;
 }
 
-line_info *create_table(void *file_addr, off_t file_size, long long *table_length) {
+line_info *create_table(char *file_addr, off_t file_size, long long *table_length) {
 	if (table_length == NULL) {
 		fprintf(stderr, "Can't create table: Invalid argument(s)\n");
 		return NULL;
@@ -104,7 +104,7 @@ line_info *create_table(void *file_addr, off_t file_size, long long *table_lengt
 	while (file_offset <= file_size) {
 		char *c = NULL;
 		if (file_offset < file_size) {
-			c = (char *) (file_addr + file_offset);
+			c = file_addr + file_offset;
 		}
 		
 		if (file_offset < file_size && (c != NULL && *c != '\n')) {
@@ -222,7 +222,7 @@ int get_line_number(long long *line_num) {
 	return SUCCESS_GET_LINE_NUMBER;
 }
 
-int print_file(void *file_addr, off_t file_size) {
+int print_file(char *file_addr, off_t file_size) {
 	off_t file_offset = 0;
 	while (file_offset < file_size) {
 		int write_size = BUFFER_SIZE;
@@ -265,7 +265,7 @@ int main(int argc, char** argv) {
 	}
 	off_t file_size = st.st_size;
 	
-	void *file_addr = mmap(0, file_size, PROT_READ, MAP_SHARED, fildes, 0);    
+	char *file_addr = (char *)mmap(0, file_size, PROT_READ, MAP_SHARED, fildes, 0);    
 	if (file_addr == MAP_FAILED) {
 		perror("Can't map file");
 		return 0;
