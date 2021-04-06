@@ -41,6 +41,8 @@ extern int errno;
 #define GET_LINE_NUMBER_TIMEOUT 2
 #define INVALID_LINE_NUMBER_INPUT 0
 #define SELECT_NO_REACTION 0
+#define READ_TIMEOUT 2
+#define READ_NOTHING 1
 
 #define NULL_WRITEFDS NULL
 #define NULL_ERRORFDS NULL
@@ -206,6 +208,27 @@ int validate_strtoll(char *endptr) {
 	return SUCCESS_STRTOLL;
 }
 
+int read_from_console(char *input, size_t size) {
+	int wait_check = wait_for_input();
+	if (wait_check == ERROR_SELECT) {
+		return ERROR_READ;
+	}
+	if (wait_check == SELECT_NO_REACTION) {
+		return READ_TIMEOUT;
+	}
+
+        ssize_t bytes_read = read(STDIN_FILENO, input, size);
+	if (bytes_read == ERROR_READ) {
+		perror("Can't get line number");
+		return ERROR_READ;
+	}	
+	if (bytes_read == 0) {
+		return READ_NOTHING;
+	}	
+   	input[bytes_read] = '\0';
+	return SUCCESS_READ;
+}
+
 int get_line_number(long long *line_num) {
 	char input[INPUT_SIZE + 1]; 
 	
@@ -214,23 +237,16 @@ int get_line_number(long long *line_num) {
 		return ERROR_GET_LINE_NUMBER;
 	}
 
-	int wait_check = wait_for_input();
-	if (wait_check == ERROR_SELECT) {
+	int read_check = read_from_console(input, INPUT_SIZE);
+	if (read_check == ERROR_READ) {
 		return ERROR_GET_LINE_NUMBER;
 	}
-	if (wait_check == SELECT_NO_REACTION) {
+	if (read_check == READ_TIMEOUT) {
 		return GET_LINE_NUMBER_TIMEOUT;
 	}
-
-        ssize_t bytes_read = read(STDIN_FILENO, input, INPUT_SIZE);
-	if (bytes_read == ERROR_READ) {
-		perror("Can't get line number");
-		return ERROR_GET_LINE_NUMBER;
-	}	
-	if (bytes_read == 0) {
+	if (read_check == READ_NOTHING) {
 		return INVALID_LINE_NUMBER_INPUT;
-	}	
-   	input[bytes_read] = '\0';
+	}
 
 	char *endptr = input;
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
@@ -344,21 +360,17 @@ int print_lines(int fildes, line_info *table, long long table_length) {
 		if (get_line_num_check == ERROR_GET_LINE_NUMBER) {
 			return ERROR_PRINT_LINES;
 		}
-
 		if (get_line_num_check == INVALID_LINE_NUMBER_INPUT) {
 			continue;
 		}
-
 		if (get_line_num_check == GET_LINE_NUMBER_TIMEOUT) {
 			print_file(fildes);
 			break;
 		}
-
 		if (line_num < 0 || line_num > table_length) {
 			fprintf(stderr, "Invalid line number. It has to be in range [0, %lld]\n", table_length);
 			continue;
 		}
-
 		if (line_num == STOP_INPUT) {
 			break;
 		}
