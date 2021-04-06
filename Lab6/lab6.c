@@ -190,7 +190,7 @@ int get_line_number(long long *line_num) {
 
 	int wait_check = wait_for_input();
 	if (wait_check == ERROR_SELECT) {
-		return INVALID_LINE_NUMBER_INPUT;
+		return ERROR_GET_LINE_NUMBER;
 	}
 	if (wait_check == SELECT_NO_REACTION) {
 		return GET_LINE_NUMBER_TIMEOUT;
