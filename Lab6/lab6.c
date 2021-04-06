@@ -326,8 +326,7 @@ int close_file(int fildes) {
 		perror("Can't close file");
 		return ERROR_CLOSE_FILE;
 	}
-	return SUCCESS_CLOSE_FILE;
-	
+	return SUCCESS_CLOSE_FILE;	
 }
 
 int print_line(int fildes, line_info *table, long long line_num) {
@@ -345,7 +344,6 @@ int print_line(int fildes, line_info *table, long long line_num) {
 		return ERROR_PRINT_LINE;
 	}
 	return SUCCESS_PRINT_LINE;
-	
 }
 
 int print_lines(int fildes, line_info *table, long long table_length) {
