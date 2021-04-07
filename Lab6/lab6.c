@@ -193,6 +193,10 @@ int wait_for_input() {
 }
 
 int validate_strtoll(char *endptr) {
+	if (endptr == NULL) {
+		return SUCCESS_STRTOLL;
+	}
+
 	if (errno != NO_ERROR) {
 		perror("Can't convert given number");
 		errno = 0;
@@ -201,10 +205,12 @@ int validate_strtoll(char *endptr) {
 
 	int compare1_result = strcmp(endptr, "\n");
 	int compare2_result = strcmp(endptr, "");
+
 	if (compare1_result != STRING_EQUAL && compare2_result != STRING_EQUAL) {
 		fprintf(stderr, "Number contains invalid symbols\n");
 		return ERROR_STRTOLL;
-	}	
+	}
+
 	return SUCCESS_STRTOLL;
 }
 
@@ -238,16 +244,12 @@ int get_line_number(long long *line_num) {
 	}
 
 	int read_check = read_from_console(input, INPUT_SIZE);
-	if (read_check == ERROR_READ) {
-		return ERROR_GET_LINE_NUMBER;
+	switch(read_check) {
+		case ERROR_READ: return ERROR_GET_LINE_NUMBER;
+		case READ_TIMEOUT: return GET_LINE_NUMBER_TIMEOUT;
+		case READ_NOTHING: return INVALID_LINE_NUMBER_INPUT;
 	}
-	if (read_check == READ_TIMEOUT) {
-		return GET_LINE_NUMBER_TIMEOUT;
-	}
-	if (read_check == READ_NOTHING) {
-		return INVALID_LINE_NUMBER_INPUT;
-	}
-
+	
 	char *endptr = input;
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
 
