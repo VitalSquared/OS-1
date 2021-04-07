@@ -253,12 +253,6 @@ int get_line_number(long long *line_num) {
 	char *endptr = input;
 	*line_num = strtoll(input, &endptr, DECIMAL_SYSTEM);	
 
-	if (errno != NO_ERROR) {
-		perror("Can't convert given number");
-		errno = 0;
-		return INVALID_LINE_NUMBER_INPUT;
-	}
-
 	int strtoll_check = validate_strtoll(endptr);
 	if (strtoll_check == ERROR_STRTOLL) {
 		return INVALID_LINE_NUMBER_INPUT;
