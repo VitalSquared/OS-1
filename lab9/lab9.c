@@ -45,6 +45,7 @@ int main(int argc, char* argv[]) {
     }
 
     printf("Wait ended.\n");
+    
     return 0;
 }
 
