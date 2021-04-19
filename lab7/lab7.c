@@ -67,8 +67,8 @@ extern int errno;
 #define WITHOUT_NEW_LINE 0
 
 typedef struct line_info {
-	off_t offset;
-	size_t length;
+    off_t offset;
+    size_t length;
 } line_info;
 
 int add_to_table(line_info **table, long long *table_size, long long *table_length, off_t line_offset, size_t line_length) {
@@ -352,7 +352,7 @@ int print_lines(char *file_addr, off_t file_size, line_info *table, long long ta
         if (line_num == STOP_INPUT) {
             break;
         }
-        
+
         int print_line_check = print_line(file_addr, table, line_num);
         if (print_line_check == ERROR_PRINT_LINE) {
             return ERROR_PRINT_LINES;
