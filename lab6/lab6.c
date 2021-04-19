@@ -64,8 +64,8 @@ extern int errno;
 #define TIMEOUT_USEC 0
 
 typedef struct line_info {
-	off_t offset;
-	size_t length;
+    off_t offset;
+    size_t length;
 } line_info;
 
 int add_to_table(line_info **table, long long *table_size, long long *table_length, off_t line_offset, size_t line_length) {
