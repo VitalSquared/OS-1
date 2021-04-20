@@ -65,6 +65,8 @@ extern int errno;
 #define TIMEOUT_USEC 0
 #define WITH_NEW_LINE 1
 #define WITHOUT_NEW_LINE 0
+#define ANY_ADDRESS 0
+#define FILE_START_POS 0
 
 typedef struct line_info {
     off_t offset;
@@ -370,7 +372,7 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    char *file_addr = (char *) mmap(0, file_size, PROT_READ, MAP_SHARED, fildes, 0);
+    char *file_addr = (char *) mmap(ANY_ADDRESS, file_size, PROT_READ, MAP_SHARED, fildes, FILE_START_POS);
     if (file_addr == MAP_FAILED) {
         perror("Can't map file");
         return 0;
