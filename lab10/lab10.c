@@ -9,6 +9,7 @@
 #define CHILD_PROCESS 0
 #define MIN_NUM_OF_ARGS 2
 #define STATUS_INIT 0
+#define FALSE 0
 
 int main(int argc, char **argv) {
     if (argc < MIN_NUM_OF_ARGS) {
@@ -35,7 +36,13 @@ int main(int argc, char **argv) {
         return EXIT_FAILURE;
     }
 
-    int exit_status = WEXITSTATUS(status);
-    printf("Child process exit status: %d\n", exit_status);
+    if (WIFEXITED(status) != FALSE) {
+        int exit_status = WEXITSTATUS(status);
+        printf("Child process terminated successfully with exit status: %d\n", exit_status);
+    }
+    else if (WIFSIGNALED(status) != FALSE) {
+        int signal = WTERMSIG(status);
+        printf("Child process terminated by a signal: %d\n", signal);
+    }
     return EXIT_SUCCESS;
 }
