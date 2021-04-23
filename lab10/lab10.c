@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 
     if (WIFEXITED(status) != FALSE) {
         int exit_status = WEXITSTATUS(status);
-        printf("Child process terminated successfully with exit status: %d\n", exit_status);
+        printf("Child process terminated with exit status: %d\n", exit_status);
     }
     else if (WIFSIGNALED(status) != FALSE) {
         int signal = WTERMSIG(status);
