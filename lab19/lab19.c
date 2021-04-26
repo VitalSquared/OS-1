@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <fnmatch.h>
 #include <unistd.h>
+#include <string.h>
 
 #define ERROR_OPEN_DIR NULL
 #define ERROR_CLOSE_DIR -1
@@ -22,6 +23,9 @@
 #define NO_ERROR 0
 #define FNM_MATCH 0
 #define NOT_ALL_ENTRIES_CHECKED 1
+#define NO_ENTRY NULL
+
+#define CURRENT_DIRECTORY "."
 
 extern int errno;
 
@@ -29,7 +33,7 @@ int find_matching_entries(DIR *dirp, char *pattern) {
     int matches_count = 0;
     while (NOT_ALL_ENTRIES_CHECKED) {
         struct dirent *directory_entry = readdir(dirp);
-        if (directory_entry == NULL) {
+        if (directory_entry == NO_ENTRY) {
             if (errno != NO_ERROR) {
                 perror("Can't read directory");
                 return ERROR_FIND_MATCHES;
@@ -54,7 +58,8 @@ int find_matching_entries(DIR *dirp, char *pattern) {
 }
 
 ssize_t get_pattern(char *pattern, size_t size) {
-    ssize_t write_check = write(STDOUT_FILENO, "Enter pattern: ", 15);
+    char msg[] = "Enter pattern: ";
+    ssize_t write_check = write(STDOUT_FILENO, msg, strlen(msg));
     if (write_check == ERROR_WRITE) {
         perror("Error while writing message for user");
         return ERROR_GET_PATTERN;
@@ -81,7 +86,7 @@ ssize_t get_pattern(char *pattern, size_t size) {
 }
 
 DIR *open_directory(const char *dirname) {
-    DIR *dirp = opendir(".");
+    DIR *dirp = opendir(dirname);
     if (dirp == NULL) {
         perror("Can't open directory");
         return ERROR_OPEN_DIR;
@@ -99,7 +104,7 @@ int close_directory(DIR *dirp) {
 }
 
 int main(int argc, char **argv) {
-    DIR *dirp = open_directory(".");
+    DIR *dirp = open_directory(CURRENT_DIRECTORY);
     if (dirp == ERROR_OPEN_DIR) {
         return EXIT_FAILURE;
     }
@@ -107,6 +112,7 @@ int main(int argc, char **argv) {
     char pattern[PATTERN_SIZE + 1];
     ssize_t pattern_length = get_pattern(pattern, PATTERN_SIZE);
     if (pattern_length == ERROR_GET_PATTERN) {
+        close_directory(dirp);
         return EXIT_FAILURE;
     }
     pattern[pattern_length] = '\0';
