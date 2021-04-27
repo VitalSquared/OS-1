@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
         return EXIT_SUCCESS;
     }
 
-    char *new_envp[2] = { "PATH=/home/students/19200/v.spirin/lab11/", NULL };
+    char *new_envp[2] = { "PATH=/home/students/19200/v.spirin/lab11/program", NULL };
     execvpe(argv[1], &argv[1], new_envp);
     return EXIT_FAILURE;
 }
