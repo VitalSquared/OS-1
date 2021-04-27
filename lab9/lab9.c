@@ -35,6 +35,6 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 
-    printf("Random text that is written by parent\n");
+    printf("Text written by parent\n");
     return EXIT_SUCCESS;
 }
