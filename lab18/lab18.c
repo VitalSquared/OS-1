@@ -8,12 +8,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <errno.h>
 
 #define GET_OWNER_ERROR NULL
 #define GET_GROUP_ERROR NULL
 #define GET_TIME_ERROR NULL
 #define PRINT_ERROR -1
 #define STAT_ERROR -1
+
+#define NO_ERROR 0
 
 #define PRINT_SUCCESS 0
 #define PRINT_FILE_INFO_INCOMPLETE 1
@@ -32,6 +35,8 @@
 #define OTHER_FILE_TYPE '?'
 #define EMPTY ' '
 
+extern int errno;
+
 void get_file_permissions(struct stat stat, char *permissions_string) {
     char permission_symbols[NUMBER_OF_PERMISSIONS] = {'r', 'w', 'x'};
     int file_permissions[NUMBER_OF_FILE_PERMISSIONS] = {S_IRUSR, S_IWUSR, S_IXUSR,
@@ -39,27 +44,40 @@ void get_file_permissions(struct stat stat, char *permissions_string) {
                                                         S_IROTH, S_IWOTH, S_IXOTH};
 
     for (int perm_idx = 0; perm_idx < NUMBER_OF_FILE_PERMISSIONS; perm_idx++) {
-        if (stat.st_mode & file_permissions[perm_idx]) {
-            permissions_string[perm_idx] = permission_symbols[perm_idx % NUMBER_OF_PERMISSIONS];
-        } else {
+        if ((stat.st_mode & file_permissions[perm_idx]) == FALSE) {
             permissions_string[perm_idx] = '-';
+        }
+        else {
+            permissions_string[perm_idx] = permission_symbols[perm_idx % NUMBER_OF_PERMISSIONS];
         }
     }
 }
 
 char *get_file_owner(struct stat stat) {
+    errno = 0;
     struct passwd *owner_info = getpwuid(stat.st_uid);
     if (owner_info == GET_OWNER_ERROR) {
-        perror("Can't get file owner info");
+        if (errno == NO_ERROR) {
+            fprintf(stderr, "Can't find passwd entry\n");
+        }
+        else {
+            perror("Can't get file owner info");
+        }
         return GET_OWNER_ERROR;
     }
     return owner_info->pw_name;
 }
 
 char *get_file_group(struct stat stat) {
+    errno = 0;
     struct group *group_info = getgrgid(stat.st_gid);
     if (group_info == GET_GROUP_ERROR) {
-        perror("Can't get file group info");
+        if (errno == NO_ERROR) {
+            fprintf(stderr, "Can't find group entry\n");
+        }
+        else {
+            perror("Can't get file group info");
+        }
         return GET_GROUP_ERROR;
     }
     return group_info->gr_name;
@@ -122,7 +140,7 @@ int print_file_info(char *path_to_file) {
         return PRINT_ERROR;
     }
 
-    printf("%c%s   %lu %s %s    %ld %.19s %s\n",
+    printf("%c%s\t%lu\t%s\t%s\t%ld\t%.19s\t%s\n",
            get_file_type(stat),
            permissions_string,
            get_file_number_of_links(stat),
@@ -134,14 +152,26 @@ int print_file_info(char *path_to_file) {
     return PRINT_SUCCESS;
 }
 
+int any_files_specified(int argc) {
+    return argc < 2 ? FALSE : TRUE;
+}
+
 int main(int argc, char **argv) {
-    if (argc < 2) {
-        print_file_info(CURRENT_DIRECTORY);
-        return EXIT_SUCCESS;
+    char **files;
+    int files_count = 0;
+
+    char *default_files[] = { CURRENT_DIRECTORY, NULL };
+    if (any_files_specified(argc) == FALSE) {
+        files = default_files;
+        files_count = 1;
+    }
+    else {
+        files = &argv[1];
+        files_count = argc - 1;
     }
 
-    for (int file_idx = 1; file_idx < argc; file_idx++) {
-        int print_check = print_file_info(argv[file_idx]);
+    for (int file_idx = 0; file_idx < files_count; file_idx++) {
+        int print_check = print_file_info(files[file_idx]);
         if (print_check == PRINT_ERROR) {
             return EXIT_FAILURE;
         }
