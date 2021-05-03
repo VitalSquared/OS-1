@@ -54,7 +54,7 @@ void get_file_permissions(struct stat stat, char *permissions_string) {
 }
 
 char *get_file_owner(struct stat stat) {
-    errno = 0;
+    errno = NO_ERROR;
     struct passwd *owner_info = getpwuid(stat.st_uid);
     if (owner_info == GET_OWNER_ERROR) {
         if (errno == NO_ERROR) {
@@ -69,7 +69,7 @@ char *get_file_owner(struct stat stat) {
 }
 
 char *get_file_group(struct stat stat) {
-    errno = 0;
+    errno = NO_ERROR;
     struct group *group_info = getgrgid(stat.st_gid);
     if (group_info == GET_GROUP_ERROR) {
         if (errno == NO_ERROR) {
