@@ -77,13 +77,6 @@ ssize_t get_pattern(char *pattern, size_t size) {
         bytes_read--;
     }
 
-    for (int i = 0; i < bytes_read; i++) {
-        if (pattern[i] == '/') {
-            printf("Symbol \'/\' is not supported in the pattern\n");
-            return ERROR_GET_PATTERN;
-        }
-    }
-
     return bytes_read;
 }
 
@@ -119,15 +112,9 @@ int close_directory(DIR *dirp) {
 }
 
 int main(int argc, char **argv) {
-    DIR *dirp = open_directory(CURRENT_DIRECTORY);
-    if (dirp == ERROR_OPEN_DIR) {
-        return EXIT_FAILURE;
-    }
-
     char entered_pattern[PATTERN_SIZE + 1];
     ssize_t entered_pattern_length = get_pattern(entered_pattern, PATTERN_SIZE);
     if (entered_pattern_length == ERROR_GET_PATTERN) {
-        close_directory(dirp);
         return EXIT_FAILURE;
     }
     entered_pattern[entered_pattern_length] = '\0';
@@ -135,6 +122,11 @@ int main(int argc, char **argv) {
     char modified_pattern[2 * PATTERN_SIZE + 1];
     ssize_t modified_pattern_length = modify_pattern(modified_pattern, entered_pattern, entered_pattern_length);
     modified_pattern[modified_pattern_length] = '\0';
+
+    DIR *dirp = open_directory(CURRENT_DIRECTORY);
+    if (dirp == ERROR_OPEN_DIR) {
+        return EXIT_FAILURE;
+    }
 
     int matched_entries_count = find_matching_entries(dirp, modified_pattern);
     if (matched_entries_count == ERROR_FIND_MATCHES) {
